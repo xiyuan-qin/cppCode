@@ -144,15 +144,15 @@ public:
         SparseMatrix c(rows, cols);
         int an = 0, bn = 0;
         while (an < size && bn < b.size) {
-            int aindex = (term[an].row - 1) * cols + term[an].col;
-            int bindex = (b.term[bn].row - 1) * cols + b.term[bn].col;
+            int aindex = (term[an].row - 1) * cols + term[an].col;//a在实际矩阵中的相对位置
+            int bindex = (b.term[bn].row - 1) * cols + b.term[bn].col;//b在实际矩阵中的相对位置
 
             if (aindex < bindex) {
-                c.term[c.size] = term[an];
+                c.term[c.size] = term[an];//a小a就先插
                 an++;
                 c.size++;
             }
-            else if (aindex == bindex) {
+            else if (aindex == bindex) {//相等的情况下，相加
                 if (term[an].value + b.term[bn].value != 0) {
                     c.term[c.size].col = term[an].col;
                     c.term[c.size].row = term[an].row;
@@ -162,13 +162,13 @@ public:
                 an++;
                 bn++;
             }
-            else {
+            else {//b小，b相加
                 c.term[c.size] = b.term[bn];
                 bn++;
                 c.size++;
             }
         }
-
+        //累加剩下的元素
         while (an < size) {
             c.term[c.size] = term[an];
             an++;
@@ -206,8 +206,8 @@ public:
         SparseMatrix b(cols, rows);
         b.size = size;
 
-        int* col_none_0 = new int[cols + 1];
-        int* col_index = new int[cols + 1];
+        int* col_none_0 = new int[cols + 1];//新矩阵行非0元素个数
+        int* col_index = new int[cols + 1];//首个非0元素位置
 
         for (int i = 1; i <= cols; i++) col_none_0[i] = 0;
         for (int i = 0; i < size; i++) col_none_0[term[i].col]++;
