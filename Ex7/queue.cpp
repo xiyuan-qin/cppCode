@@ -39,10 +39,9 @@ public:
 
     void pop(){
         queue_front = (queue_front + 1) % size; 
-        //queue[queue_front] = 0;
     }
 
-    void push(T ele){
+    /*void push(T ele){
         if((queue_back + 1) % size == queue_front){ //满了
             // 扩容
             T *newQueue = new T[size * 2];
@@ -58,7 +57,34 @@ public:
         }
         queue_back = (queue_back + 1) % size;
         queue[queue_back] = ele;
+    }*/
+
+    void push(T ele) {
+        if ((queue_back + 1) % size == queue_front) { // 队列满了
+            // 扩容到新数组的两边
+            T *newQueue = new T[size * 2];
+            int newFront = (size * 2) / 4;  // 新队列开始复制元素的位置
+            int index = newFront;
+
+            // 复制原有的队列元素到新队列的中间位置
+            for (int i = (queue_front + 1) % size; i != (queue_back + 1) % size; i = (i + 1) % size) {
+                newQueue[index++] = queue[i];
+            }
+
+            delete[] queue;  // 释放旧队列内存
+
+            // 更新指针和大小
+            queue = newQueue;
+            size *= 2;
+            queue_front = newFront - 1;
+            queue_back = index - 1;
+        }
+
+        // 插入新元素
+        queue_back = (queue_back + 1) % size;
+        queue[queue_back] = ele;
     }
+
 
 
 };
