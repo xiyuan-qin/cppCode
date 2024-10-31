@@ -45,7 +45,7 @@ public:
         size++;
     }
 
-    void reset() {
+    void reset() {//重置矩阵
         int n, m;
         cin >> n >> m;
         rows = n;
@@ -68,7 +68,9 @@ public:
         }
     }
 
-    void times() {
+
+    //O（n^3）
+    void times() {//矩阵乘法
         int n, m, nz;
         cin >> n >> m >> nz;
         SparseMatrix b(n, m);
@@ -96,18 +98,19 @@ public:
         for (int i = 2; i <= b.rows; i++) row_index[i] = row_index[i - 1] + row_none_0[i - 1];
 
         int id = 0;
-        for (int i = 1; id < size; i++) {
+        for (int i = 1; id < size; i++) {//计算第i行，i 表示当前正在处理的行，而 id 表示当前处理的非零元素的索引。
+            //只要id走到size证明走完了
             //清零result数组
             for (int j = 1; j <= b.cols; j++) result[j] = 0;
 
             while (term[id].row == i) {
                 if (row_none_0[term[id].col] != 0) {//如果b中对应的列有非零元素，往下乘row_none_0个元素
                     for (int x = row_index[term[id].col]; x < row_index[term[id].col] + row_none_0[term[id].col]; x++)
-                        result[b.term[x].col] += term[id].value * b.term[x].value;
+                        result[b.term[x].col] += term[id].value * b.term[x].value;//把结果存到result
                 }
                 id++;
             }
-
+            
             for (int p = 1; p <= b.cols; p++) {
                 if (result[p] != 0) {
                     c.term[c.size].value = result[p];
@@ -124,8 +127,9 @@ public:
         delete[] result;
     }
 
-    
-    void add() {
+    //复杂度O(a.size + b.size) ,遍历两个数组的元素相加
+    void add() {//矩阵加法 
+
         int n, m, nz;
         cin >> n >> m >> nz;
         SparseMatrix b(n, m);
@@ -181,7 +185,7 @@ public:
             c.size++;
         }
 
-        *this = c;
+        *this = c;//把加好的矩阵赋给原来的
     }
 
     void print() {  // 输出
@@ -202,6 +206,7 @@ public:
         }
     }
 
+    //复杂度: O(size) , 遍历原矩阵的非0元素，其他的都是累加相当于k * size ， k拿掉
     void transpose() {  // 转置
         SparseMatrix b(cols, rows);
         b.size = size;
