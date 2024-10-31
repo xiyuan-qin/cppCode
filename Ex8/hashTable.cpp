@@ -45,47 +45,50 @@ public:
         cout<<-1<<endl;
     }
 
-    void erase(T value){
-        int i = 0;
+    void erase(T value) {
+        int index = value % D;
+        int start = index;
+        bool found = false;
+
+        // 找到需要删除的元素
+        while (table[index] != -1) {  // 空位表示未找到
+            if (table[index] == value) {
+                found = true;
+                break;
+            }
+            index = (index + 1) % D;
+            if (index == start) break;
+        }
+
+        if (!found) {
+            cout << "Not Found" << endl;
+            return;
+        }
+
+        // 标记删除，并开始调整后续探测路径
+        table[index] = -1;
         int count = 0;
-        bool find = false;
 
-        for(i = 0 ; i < D ; i++){
-            if(table[i] == value){
-                find = true;
-                break;
+        int next = (index + 1) % D;
+        while (table[next] != -1) {  // 遇到空位停止,最差情况返回原点
+            int original_position = table[next] % D;
+
+            // 判断是否应该前移
+            if ((next > index && (original_position <= index || original_position > next)) ||//没有环绕，当original_position位于index和next的中间位置时证明存放在正确位置上，不需要移动
+                (next < index && (original_position <= index && original_position > next))) {//环绕了，只有当original_position位于两者中间时才需要移动
+                table[index] = table[next];
+                table[next] = -1;
+                index = next;
+                count++;
             }
-        }
-        if(!find){
-            cout<<"Not Found"<<endl;
-            return ;
+
+            next = (next + 1) % D;//继续往后移动
         }
 
-        int ori_i = i;
-        if(table[i + 1] == -1){//该元素位置后面为空
-                table[i] = -1;
-                count = 0;
-                cout<<count<<endl;
-                return ;
-        }
-        while(true){//该元素位置后面不为空
-            table[i % D] = table[(i + 1) % D];
-            i++;
-            
-            if (table[i % D] == -1) {  // 找到空位结束
-                table[(i - 1) % D] = -1;
-                break;
-            }
-            
-            if(i % D == ori_i){
-                table[(i-1) % D] = -1;
-                break;
-            }
-            count++;
-        }
-        cout<<count<<endl;
-        
+        cout << count << endl;
     }
+
+
 };
 
 int main(){
