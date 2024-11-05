@@ -1,251 +1,220 @@
-#include <iostream>
+#include<iostream>
 using namespace std;
 
-// 节点类声明
-template <class T>
-class binaryTreeNode {
+template<class T>
+class queue {
+private:
+    int queuefront; // 第一个数前一个位置的索引
+    int queueback;  // 最后一个数的索引
+    int arraylength; // 队列长度
+    T* queue0;
 public:
-    T element;
-    binaryTreeNode<T>* left_child;
-    binaryTreeNode<T>* right_child;
-
-    binaryTreeNode() {
-        left_child = right_child = NULL;
+    queue(int l) {
+        arraylength = l;
+        queue0 = new T[arraylength];
+        queuefront = queueback = 0;
     }
-
-    binaryTreeNode(const T& ele) {
-        element = ele;
-        left_child = right_child = NULL;
-    }
-
-    binaryTreeNode(const T& ele, binaryTreeNode<T>* left_child, binaryTreeNode<T>* right_child) {
-        element = ele;
-        this->left_child = left_child;
-        this->right_child = right_child;
+    ~queue() { delete[] queue0; }
+    bool empty()const { return queuefront == queueback; } // 是否为空
+    int qsize()const { return queueback - queuefront; }   // 列表大小
+    T& front() { return queue0[queuefront]; }             // 第一个位置
+    void pop() { queuefront++; }                          // 删除
+    void push(T& theelement) {                            // 插入
+        queue0[queueback] = theelement;
+        queueback++;
     }
 };
 
-// 二叉树类声明
-template <class T>
-class binaryTree {
+template<class T>
+class arrayStack {
+private:
+    int stackTop;   // 栈顶
+    int arrayLength; // 栈的容量
+    T* stack;       // 元素数组
 public:
-    binaryTreeNode<T>* root;
-    int tree_size;
-
-    binaryTree() {
-        root = NULL;
-        tree_size = 0;
+    arrayStack(int al=2000) {
+        arrayLength = al;
+        stack = new T[al];
+        stackTop = -1; // 栈为空
     }
+    ~arrayStack() { delete[] stack; }
+    bool empty()const { return stackTop == -1; }          // 判断是否为空
+    int Stacksize()const { return stackTop + 1; }         // 元素个数
+    T& top() { return stack[stackTop]; }                  // 返回栈顶元素
+    void pop() { stack[stackTop--] = 0; }                 // 删除栈顶元素
+    void push(const T& theElement) { stack[++stackTop] = theElement; } // 在栈顶后加入元素
+};
 
-    void buildTree(int n) {
-        if (n <= 0) return;
-        root = new binaryTreeNode<T>(1); // 根节点编号1
-        tree_size = n;
-
-        binaryTreeNode<T>** nodes = new binaryTreeNode<T>*[n + 1];//存放结点的指针数组
-        for (int i = 1; i <= n; i++) {
-            nodes[i] = new binaryTreeNode<T>(i);//肯定存在n个元素
-        }
-
-        int index = 2;
-        int left_ele, right_ele;
-        for (int i = 1; i <= n; i++) {
-            cin >> left_ele >> right_ele;
-            if (left_ele != -1) {
-                nodes[i]->left_child = nodes[index];
-                nodes[index]->element = left_ele;
-                index++;
-            }
-            if (right_ele != -1) {
-                nodes[i]->right_child = nodes[index];
-                nodes[index]->element = left_ele;
-                index++;
-            }
-        }
-
-        root = nodes[1]; // 根节点设为编号1
-        delete[] nodes;
-    }
-
-    //前序遍历
-    void preOrder(binaryTreeNode<T>* node) {
-        if (node) {//node非空
-            cout << node->element << " ";
-            preOrder(node->left_child);
-            preOrder(node->right_child);
-        }
-    }
-
-    //中序遍历
-    void inOrder(binaryTreeNode<T>* node) {
-        binaryTreeNode<T>* current = node;
-        binaryTreeNode<T>* pre;
-        while (current != NULL) {
-            if (current->left_child == NULL) {
-                cout << current->element << " ";
-                current = current->right_child;
-            } else {
-                pre = current->left_child;
-                while (pre->right_child != NULL && pre->right_child != current) {
-                    pre = pre->right_child;
-                }
-                if (pre->right_child == NULL) {
-                    //第一次访问节点时，如果存在子节点，在左子树的最右面的叶子
-                    //建立一个指向该节点的线程
-                    pre->right_child = current;
-                    current = current->left_child;
-                } else {
-                    //发现最右面的节点指向原节点，证明访问过
-                    //说明左子树便利完成，断开线程并移动到右节点
-                    pre->right_child = NULL;
-                    cout << current->element << " ";
-                    current = current->right_child;
-                }
-            }
-        }
-    }
-
-    //后序遍历
-    void postOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>* dummyRoot = new binaryTreeNode<T>(0);
-        dummyRoot->left_child = node;
-        binaryTreeNode<T>* current = dummyRoot;
-        binaryTreeNode<T>* pre;
-        
-        while (current != NULL) {
-            if (current->left_child == NULL) {
-                current = current->right_child;
-            } else {
-                pre = current->left_child;
-                while (pre->right_child != NULL && pre->right_child != current) {
-                    pre = pre->right_child;
-                }
-                if (pre->right_child == NULL) {
-                    pre->right_child = current;
-                    current = current->left_child;
-                } else {
-                    pre->right_child = NULL;
-                    printReverse(current->left_child, pre);
-                    current = current->right_child;
-                }
-            }
-        }
-        delete dummyRoot;
-    }
-
-    void printReverse(binaryTreeNode<T>* from, binaryTreeNode<T>* to) {
-        reversePrint(from, to);
-        binaryTreeNode<T>* p = to;
-        while (true) {
-            cout << p->element << " ";
-            if (p == from) break;
-            p = p->right_child;
-        }
-        reversePrint(to, from);
-    }
-
-    void reversePrint(binaryTreeNode<T>* from, binaryTreeNode<T>* to) {
-        if (from == to) return;
-        binaryTreeNode<T>* x = from;
-        binaryTreeNode<T>* y = from->right_child;
-        binaryTreeNode<T>* z;
-        while (x != to) {
-            z = y->right_child;
-            y->right_child = x;
-            x = y;
-            y = z;
-        }
-    }
-
-    void levelOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>** queue = new binaryTreeNode<T>*[tree_size];
-        int front = 0, back = 0;
-        queue[back++] = node;
-        while (front < back) {
-            binaryTreeNode<T>* current = queue[front++];
-            cout << current->element << " ";
-            if (current->left_child != NULL) queue[back++] = current->left_child;
-            if (current->right_child != NULL) queue[back++] = current->right_child;
-        }
-        delete[] queue;
-    }
-
-    void numLevelOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>** queue = new binaryTreeNode<T>*[tree_size];
-        int front = 0, back = 0;
-        queue[back++] = node;
-        while (front < back) {
-            binaryTreeNode<T>* current = queue[front++];
-            cout << treeNum(current) << " ";
-            if (current->left_child != NULL) queue[back++] = current->left_child;
-            if (current->right_child != NULL) queue[back++] = current->right_child;
-        }
-        delete[] queue;
-    }
-
-    void hetigtLevelOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>** queue = new binaryTreeNode<T>*[tree_size];
-        int front = 0, back = 0;
-        queue[back++] = node;
-        while (front < back) {
-            binaryTreeNode<T>* current = queue[front++];
-            cout << treeHeight(current) << " ";
-            if (current->left_child != NULL) queue[back++] = current->left_child;
-            if (current->right_child != NULL) queue[back++] = current->right_child;
-        }
-        delete[] queue;
-    }
-
-
-
-    int treeNum(binaryTreeNode<T>* node){
-        if(node == NULL){
-            return 0;
-        }
-        else{
-            return 1 + treeNum(node->left_child) + treeNum(node->right_child);
-        }
-    }
-
-    int treeHeight(binaryTreeNode<T>* node){
-        if(node == NULL){
-            return 0;
-        }
-        int h_left = treeHeight(node -> left_child);
-        int h_right = treeHeight(node -> right_child);
-        if(h_left > h_right){
-            return ++h_left;
-        }
-        else{
-            return ++h_right;
-        }
+struct binaryTreeNode {   // 树节点 
+    int element;
+    binaryTreeNode* leftchild;
+    binaryTreeNode* rightchild;
+    binaryTreeNode(int a) {
+        element = a;
+        leftchild = rightchild = NULL;
     }
 };
+
+class linkedBinaryTree {  // 二叉树链表 
+private:
+    binaryTreeNode* root;  // 根节点 
+    binaryTreeNode** treenode; // 节点的指针数组 
+    int treesize;          // 树的节点个数 
+
+public:
+    linkedBinaryTree(int t) {
+        treesize = t;
+        root = new binaryTreeNode(1); // 初始化根节点 
+        treenode = new binaryTreeNode*[treesize + 1]; // 给指针数组分配空间 
+        treenode[1] = root;
+        for(int i = 1; i <= treesize; i++) {
+            int a, b;
+            cin >> a >> b;
+            binaryTreeNode* x = treenode[i];
+            if (a != -1) {
+                x->leftchild = new binaryTreeNode(a);
+                treenode[a] = x->leftchild;
+            }
+            if (b != -1) {
+                x->rightchild = new binaryTreeNode(b);
+                treenode[b] = x->rightchild;
+            }
+        }
+    }
+
+    bool empty()const { return treesize == 0; }
+
+    void preOrder(binaryTreeNode *t) { // 前序遍历
+        if (t != NULL) {
+            cout << t->element << " ";
+            preOrder(t->leftchild);
+            preOrder(t->rightchild);
+        }
+    }
+
+    void outputpreOrder() { // 前序遍历输出 
+        preOrder(root);
+        cout << endl;
+    }
+
+    void inOrder() { // 中序遍历 
+        arrayStack<binaryTreeNode*> s(treesize);
+        binaryTreeNode* t = root;
+        while (t != NULL || !s.empty()) {
+            while (t != NULL) {
+                s.push(t);
+                t = t->leftchild;
+            }
+            t = s.top();
+            s.pop();
+            cout << t->element << " ";
+            t = t->rightchild;
+        }
+    }
+
+    void postOrder() { // 后序遍历 
+        arrayStack<binaryTreeNode*> s1(treesize);
+        arrayStack<binaryTreeNode*> s2(treesize);
+        binaryTreeNode* t = root;
+        while (t != NULL || !s1.empty()) {
+            while (t != NULL) {
+                s2.push(t);
+                s1.push(t);
+                t = t->rightchild;
+            }
+            t = s1.top();
+            s1.pop();
+            t = t->leftchild;
+        }
+        while (!s2.empty()) {
+            binaryTreeNode* a = s2.top();
+            cout << a->element << " ";
+            s2.pop();
+        }
+    }
+
+    void levelOrder();
+    int number(binaryTreeNode* t);
+    void outputnumber();
+    int height(binaryTreeNode* t); 
+    void outputheight();
+};
+
+void linkedBinaryTree::levelOrder() { // 层次遍历
+    queue<binaryTreeNode*> q(treesize);
+    binaryTreeNode* t;
+    q.push(root);
+    while (!q.empty()) {
+        t = q.front();
+        cout << t->element << " ";
+        q.pop();
+        if (t->leftchild != NULL) q.push(t->leftchild);
+        if (t->rightchild != NULL) q.push(t->rightchild);
+    }
+    cout << endl;
+}
+
+int linkedBinaryTree::number(binaryTreeNode* t) {
+    if (t == NULL) return 0;
+    int nl = number(t->leftchild);
+    int nr = number(t->rightchild);
+    return nl + nr + 1;
+}
+
+void linkedBinaryTree::outputnumber() {
+    queue<binaryTreeNode*> q(treesize);
+    binaryTreeNode* t;
+    int b[treesize + 1];
+    q.push(root);
+    while (!q.empty()) {
+        t = q.front();
+        b[t->element] = number(t);
+        q.pop();
+        if (t->leftchild != NULL) q.push(t->leftchild);
+        if (t->rightchild != NULL) q.push(t->rightchild);
+    }
+    for (int i = 1; i <= treesize; i++) {
+        cout << b[i] << " ";
+    }
+    cout << endl;
+}
+
+int linkedBinaryTree::height(binaryTreeNode* t) {
+    if (t == NULL) return 0;
+    int hl = height(t->leftchild);
+    int hr = height(t->rightchild);
+    return max(hl, hr) + 1;
+}
+
+void linkedBinaryTree::outputheight() {
+    queue<binaryTreeNode*> q(treesize);
+    binaryTreeNode* t;
+    int b[treesize + 1];
+    q.push(root);
+    while (!q.empty()) {
+        t = q.front();
+        b[t->element] = height(t);
+        q.pop();
+        if (t->leftchild != NULL) q.push(t->leftchild);
+        if (t->rightchild != NULL) q.push(t->rightchild);
+    }
+    for (int i = 1; i <= treesize; i++) {
+        cout << b[i] << " ";
+    }
+    cout << endl;
+}
 
 int main() {
     int n;
     cin >> n;
-
-    binaryTree<int> tree;
-    tree.buildTree(n);
-
-    // 输出各种遍历
-    tree.preOrder(tree.root);
+    linkedBinaryTree tree(n);
+    tree.outputpreOrder();
+    tree.inOrder();
     cout << endl;
-    tree.inOrder(tree.root);
+    tree.postOrder();
     cout << endl;
-    tree.postOrder(tree.root);
-    cout << endl;
-    tree.levelOrder(tree.root);
-    cout << endl;
-    tree.numLevelOrder(tree.root);
-    cout<<endl;
-    tree.hetigtLevelOrder(tree.root);
-    cout<<endl;
-    
+    tree.levelOrder();
+    tree.outputnumber();
+    tree.outputheight();
     return 0;
 }

@@ -2,64 +2,30 @@
 using namespace std;
 
 template<class T>
-class Queue{
+
+class Queue {
+private:
+	int queuefront;//第一个数前一个位置的索引
+	int queueback;//最后一个数的索引
+	int arraylength;//队列长度
+	T* queue0;
 public:
-    T *queue;
-    int queue_front;
-    int queue_back;
-    int size;
-
-public:
-    Queue(int initial_size = 10){
-        queue = new T[initial_size];
-        size = initial_size;
-        queue_front = 0;
-        queue_back = -1; 
-    }
-
-    ~Queue(){
-        delete []queue;
-    }
-
-    bool empty() const {
-        return queue_front > queue_back;
-    }
-
-    int size_of_queue() const{
-        return queue_back - queue_front + 1;
-    }
-
-    T& front() const{
-        return queue[queue_front];
-    }
-
-    T& back() const{
-        return queue[queue_back];
-    }
-
-    void pop(){
-        queue_front++;
-    }
-
-    void push(T ele) {
-        if (queue_back + 1 == size) {
-            T *newQueue = new T[size * 2];
-            int index = 0;
-
-            for (int i = queue_front; i <= queue_back; i++) {
-                newQueue[index++] = queue[i];
-            }
-
-            delete[] queue;  
-            
-            queue = newQueue;
-            size *= 2;
-            queue_back = index - 1;
-            queue_front = 0;
-        }
-
-        queue[++queue_back] = ele;
-    }
+	Queue(int l) {
+		arraylength = l;
+		queue0 = new T[arraylength];
+		queuefront = queueback = 0;
+	}
+	~Queue() { delete[] queue0; }
+	bool empty()const { return queuefront==queueback; }//是否为空
+	int qsize()const { return queueback - queuefront; }//列表大小
+	T& front() { return queue0[queuefront]; }//第一个位置
+	void pop() {//删除
+		queuefront++;
+	}
+	void push(T& theelement) {//插入
+		queue0[queueback] = theelement;
+		queueback++; 
+	}
 };
 
 
@@ -92,42 +58,30 @@ template <class T>
 class binaryTree {
 public:
     binaryTreeNode<T>* root;
+    binaryTreeNode<T>** treenode; // 节点的指针数组 
     int tree_size;
 
-    binaryTree() {
-        root = NULL;
-        tree_size = 0;
-    }
-
-    void buildTree(int n) {
-        if (n <= 0) return;
-        root = new binaryTreeNode<T>(1); // 根节点编号1
-        tree_size = n;
-
-        binaryTreeNode<T>** nodes = new binaryTreeNode<T>*[n + 1];//存放结点的指针数组
-        for (int i = 1; i <= n; i++) {
-            nodes[i] = new binaryTreeNode<T>(i);//肯定存在n个元素
-        }
-
-        int index = 2;
-        int left_ele, right_ele;
-        for (int i = 1; i <= n; i++) {
-            cin >> left_ele >> right_ele;
-            if (left_ele != -1) {
-                nodes[i]->left_child = nodes[index];
-                nodes[index]->element = left_ele;
-                index++;
+    binaryTree(int t) {
+        root = new binaryTreeNode<T>(1); // 初始化根节点
+        tree_size = t;
+        treenode = new binaryTreeNode<T>*[tree_size + 1]; // 给指针数组分配空间 
+        treenode[1] = root;
+        for(int i = 1; i <= tree_size; i++) {
+            int a, b;
+            cin >> a >> b;
+            binaryTreeNode<T>* x = treenode[i];
+            if (a != -1) {
+                x->left_child = new binaryTreeNode(a);
+                treenode[a] = x->left_child;
             }
-            if (right_ele != -1) {
-                nodes[i]->right_child = nodes[index];
-                nodes[index]->element = right_ele;
-                index++;
+            if (b != -1) {
+                x->right_child = new binaryTreeNode(b);
+                treenode[b] = x->right_child;
             }
         }
-
-        root = nodes[1]; // 根节点设为编号1
-        delete[] nodes;
     }
+
+    bool empty()const { return tree_size == 0; }
 
     //前序遍历
     void preOrder(binaryTreeNode<T>* node) {
@@ -220,79 +174,79 @@ public:
         }
     }
 
-    void levelOrder(binaryTreeNode<T>* node) {
-        Queue<binaryTreeNode<T>*> nodeQueue;
-        while (node != NULL) {
-            // 输出当前节点的元素
-            cout << node->element << " ";
-            // 将左子节点加入队列
-            if (node->left_child != NULL) {
-                nodeQueue.push(node->left_child);
-            }
-
-            // 将右子节点加入队列
-            if (node->right_child != NULL) {
-                nodeQueue.push(node->right_child);
-            }
-            try{node = nodeQueue.front();}
-            catch(exception e){return;}
-            nodeQueue.pop();
+    void levelOrder() {//层次遍历
+        Queue<binaryTreeNode<T>*> q(tree_size);
+        binaryTreeNode<T>* t;
+        q.push(root);
+        while (!q.empty()) {
+            t = q.front();
+            cout << t->element << " ";
+            q.pop();
+            if (t->left_child != NULL) q.push(t->left_child);
+            if (t->right_child != NULL) q.push(t->right_child);
         }
+        cout << endl;
     }
 
 
-
-    void numLevelOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>** queue = new binaryTreeNode<T>*[tree_size];
-        int front = 0, back = 0;
-        queue[back++] = node;
-        while (front < back) {
-            binaryTreeNode<T>* current = queue[front++];
-            cout << treeNum(current) << " ";
-            if (current->left_child != NULL) queue[back++] = current->left_child;
-            if (current->right_child != NULL) queue[back++] = current->right_child;
+    void numLevelOrder() {
+        Queue<binaryTreeNode<T>*> q(tree_size);//队列类层次遍历 
+        binaryTreeNode<T>* t;
+        int b[tree_size + 1];//以各节点为根的节点数 
+        q.push(root);
+        while (!q.empty()) {//层次遍历 
+            t = q.front();
+            b[t->element]=treeNum(t);//将节点数，存在对应节点的数组位置上 
+            q.pop();
+            if (t->left_child != NULL) {
+                q.push(t->left_child);
+            }
+            if (t->right_child != NULL) {
+                q.push(t->right_child);
+            }
         }
-        delete[] queue;
+        for(int i=1;i<=tree_size;i++){
+            cout<<b[i]<<" ";
+        }
+        cout<<endl;
     }
+
 
     void heightLevelOrder(binaryTreeNode<T>* node) {
-        if (!node) return;
-        binaryTreeNode<T>** queue = new binaryTreeNode<T>*[tree_size];
-        int front = 0, back = 0;
-        queue[back++] = node;
-        while (front < back) {
-            binaryTreeNode<T>* current = queue[front++];
-            cout << treeHeight(current) << " ";
-            if (current->left_child != NULL) queue[back++] = current->left_child;
-            if (current->right_child != NULL) queue[back++] = current->right_child;
+        Queue<binaryTreeNode<T>*> q(tree_size);
+        binaryTreeNode<T>* t;
+        int b[tree_size + 1];//各节点高度 
+        q.push(root);
+        while (!q.empty()) {//层次遍历 
+            t = q.front();
+            b[t->element]=treeHeight(t);//将高度存到数组的对应位置 
+            q.pop();
+            if (t->left_child != NULL) {
+                q.push(t->left_child);
+            }
+            if (t->right_child != NULL) {
+                q.push(t->right_child);
+            }
         }
-        delete[] queue;
+        for(int i=1;i<=tree_size;i++){
+            cout<<b[i]<<" ";
+        }
+        cout<<endl;
     }
 
-
-
     int treeNum(binaryTreeNode<T>* node){
-        if(node == NULL){
-            return 0;
-        }
-        else{
-            return 1 + treeNum(node->left_child) + treeNum(node->right_child);
-        }
+      	if (node == NULL) return 0;
+        int nl = treeNum(node->left_child);//左子树节点数 
+        int nr = treeNum(node->right_child);//右子树节点数 
+        return (nl++)+(nr++)+1;
     }
 
     int treeHeight(binaryTreeNode<T>* node){
-        if(node == NULL){
-            return 0;
-        }
-        int h_left = treeHeight(node -> left_child);
-        int h_right = treeHeight(node -> right_child);
-        if(h_left > h_right){
-            return ++h_left;
-        }
-        else{
-            return ++h_right;
-        }
+        if (node == NULL) return 0;
+        int hl = treeHeight(node->left_child);//左子树的高 
+        int hr = treeHeight(node->right_child);//右子树的高 
+        if (hl > hr)return ++hl;
+        else return ++hr;
     }
 };
 
@@ -300,8 +254,7 @@ int main() {
     int n;
     cin >> n;
 
-    binaryTree<int> tree;
-    tree.buildTree(n);
+    binaryTree<int> tree(n);
 
     // 输出各种遍历
     tree.preOrder(tree.root);
@@ -310,12 +263,10 @@ int main() {
     cout << endl;
     tree.postOrder(tree.root);
     cout << endl;
-    tree.levelOrder(tree.root);
+    /*tree.levelOrder();
     cout << endl;
-    /*tree.numLevelOrder(tree.root);
-    cout << endl;
-    tree.heightLevelOrder(tree.root);
-    cout << endl;*/
+    tree.numLevelOrder();
+    tree.heightLevelOrder(tree.root);*/
     
     return 0;
 }
