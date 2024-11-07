@@ -74,8 +74,8 @@ public:
             int original_position = table[next] % D;
 
             // 判断是否应该前移
-            if ((next > index && (original_position <= index || original_position > next)) ||//没有环绕，当original_position位于index和next的中间位置时证明存放在正确位置上，不需要移动
-                (next < index && (original_position <= index && original_position > next))) {//环绕了，只有当original_position位于两者中间时才需要移动
+            if ((next > index && (original_position <= index || original_position > /*如果等于证明位于正确位置上*/ next)) ||//没有环绕，当original_position位于index和next的中间位置时证明存放在正确位置上，不需要移动
+                (next < index && (original_position <= index && original_position > next))) {//环绕了，只有当original_position位于两者中间时才需要移动，即上一个条件的逆，本质一样的
                 table[index] = table[next];
                 table[next] = -1;
                 index = next;
