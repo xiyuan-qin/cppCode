@@ -269,7 +269,7 @@ void getPostOrder(int preOrder[], int inOrder[], int postOrder[], int preStart/*
     }
 
     // 递归处理左子树
-    getPostOrder(preOrder, inOrder, postOrder, preStart + 1, inStart, rootIndex - 1/*中序的结尾，就是上一个的根节点，左子树*/, postIndex);
+    getPostOrder(preOrder, inOrder, postOrder, preStart + 1/*子树的根节点*/, inStart, rootIndex - 1/*中序的结尾，就是上一个的根节点，左子树*/, postIndex);
 
     // 递归处理右子树
     getPostOrder(preOrder, inOrder, postOrder, preStart + (rootIndex - inStart)/*左子树的个数*/ + 1, rootIndex + 1/*根节点的右边，右子树*/, inEnd, postIndex);
