@@ -1,427 +1,186 @@
 #include <iostream>
+#include <string>
 using namespace std;
 
+// 自定义队列类
 template<class T>
-class minHeap {
+class Queue {
+private:
+    int queuefront;  // 第一个数前一个位置的索引
+    int queueback;   // 最后一个数的索引
+    int arraylength; // 队列长度
+    T* queue0;       // 队列数组
 public:
-    T* heap;
-    int heap_size;
-    int array_length;
+    Queue(int l) {
+        arraylength = l;
+        queue0 = new T[arraylength];
+        queuefront = queueback = 0;
+    }
+    ~Queue() { delete[] queue0; }
+    bool empty() const { return queuefront == queueback; } // 队列是否为空
+    int qsize() const { return queueback - queuefront; }   // 队列大小
+    T& front() { return queue0[queuefront]; }             // 返回队列头部
+    void pop() { queuefront++; }                          // 删除队列头部元素
+    void push(const T& theelement) {                      // 插入队列尾部元素
+        queue0[queueback++] = theelement;
+    }
+};
 
-    minHeap(int heap_size , T* heap) {
-        this->heap_size = heap_size;
-        heap = new T[heap_size + 1];
-        array_length = heap_size;
+// Huffman树节点
+class HuffmanNode {
+public:
+    int weight;          // 权值
+    int height;          // 节点到根的高度
+    HuffmanNode* leftchild;
+    HuffmanNode* rightchild;
 
-        this->heap = heap;
+    HuffmanNode() : weight(0), height(0), leftchild(nullptr), rightchild(nullptr) {}
+};
 
-        for (int root = heap_size / 2; root >= 1; root--) {
-            T root_element = heap[root];
-            int child = root * 2;
-            while (child <= heap_size) {
-                if (child < heap_size && heap[child] > heap[child + 1]) {
+// 最小堆
+class minHeap {
+    
+private:
+    HuffmanNode** heap; // 节点指针数组
+    int heapSize;       // 堆中的元素个数
+
+public:
+
+    minHeap(HuffmanNode** theHeap, int theSize) {
+        heap = new HuffmanNode*[theSize + 1];
+        for (int i = 1; i <= theSize; i++) {
+            heap[i] = theHeap[i - 1];
+        }
+        heapSize = theSize;
+        for (int root = heapSize / 2; root >= 1; root--) {
+            HuffmanNode* rootElement = heap[root];
+            int child = 2 * root;
+            while (child <= heapSize) {
+                if (child < heapSize && heap[child]->weight > heap[child + 1]->weight) {
                     child++;
                 }
-
-                if (root_element <= heap[child]) {
-                    break;
-                }
-
+                if (rootElement->weight <= heap[child]->weight) break;
                 heap[child / 2] = heap[child];
                 child *= 2;
             }
-            heap[child / 2] = root_element;
+            heap[child / 2] = rootElement;
         }
     }
 
-    void push(T ele) {
-        if (array_length == heap_size) {
-            T* temp = new T[array_length * 2];
-            for (int i = 1; i <= heap_size; i++) {
-                temp[i] = heap[i];
-            }
-            array_length *= 2;
-            delete[] heap;
-            heap = temp;
-        }
+    ~minHeap() { delete[] heap; }
 
-        int cur_node = ++heap_size;
-        while (cur_node != 1 && heap[cur_node / 2] > ele) {
-            heap[cur_node] = heap[cur_node / 2];
-            cur_node /= 2;
-        }
-        heap[cur_node] = ele;
-    }
+    HuffmanNode* top() { return heap[1]; } // 返回根节点
 
-    void pop() {
-        if (heap_size == 0) return;
-
-        T last_ele = heap[heap_size--];
-        int cur_node = 1, child = 2;
-        while (child <= heap_size) {
-            if (child < heap_size && heap[child] > heap[child + 1]) {
+    void pop() { // 删除堆顶元素
+        HuffmanNode* lastElement = heap[heapSize--];
+        int currentNode = 1;
+        int child = 2;
+        while (child <= heapSize) {
+            if (child < heapSize && heap[child]->weight > heap[child + 1]->weight) {
                 child++;
             }
-            if (last_ele <= heap[child]) break;
-
-            heap[cur_node] = heap[child];
-            cur_node = child;
+            if (lastElement->weight <= heap[child]->weight) break;
+            heap[currentNode] = heap[child];
+            currentNode = child;
             child *= 2;
         }
-        heap[cur_node] = last_ele;
+        heap[currentNode] = lastElement;
     }
 
-    T top() {
-        return heap[1];
+    void push(HuffmanNode* x) { // 插入元素
+        int currentNode = ++heapSize; // 从新的叶节点开始
+        while (currentNode != 1 && x->weight < heap[currentNode / 2]->weight) {
+            heap[currentNode] = heap[currentNode / 2]; // 父节点下移
+            currentNode /= 2;
+        }
+        heap[currentNode] = x;
     }
+
 };
 
-void heapSort(int n) {
-    minHeap<int> heap(n);
-    for (int i = 0; i < n; i++) {
-        cout << heap.top() << " ";
+// Huffman树
+class huffmanTree {
+
+private:
+    int num;          // 树的节点数
+    HuffmanNode* root; // 根节点
+
+public:
+
+    huffmanTree(int* a, int n) { // 构造Huffman树
+        HuffmanNode** heapArray = new HuffmanNode*[n];
+        for (int i = 0; i < n; i++) {
+            heapArray[i] = new HuffmanNode();
+            heapArray[i]->weight = a[i];
+        }
+
+        minHeap heap(heapArray, n);
+        HuffmanNode *z, *l, *r;
+        for (int i = 1; i < n; i++) {
+            l = heap.top();
+            heap.pop();
+            r = heap.top();
+            heap.pop();
+            z = new HuffmanNode;
+            z->leftchild = l;
+            z->rightchild = r;
+            z->weight = l->weight + r->weight;
+            heap.push(z);
+        }
+        num = n;
+        root = heap.top();
         heap.pop();
-    }
-    cout << endl;
-}
-
-template<class T>
-
-class Stack {
-private:
-    T* stack;
-    int stackTop;//栈顶
-    int size;//栈的大小
-public:
-    Stack(int initial_size = 10) {//初始设定栈的大小为10
-        stack = new T[initial_size];
-        size = initial_size;
-        stackTop = -1;//栈顶从-1开始
+        delete[] heapArray;
     }
 
-    ~Stack() {
-        delete[] stack;
-    }
+    void length() { // 计算编码长度
+        int height = 0;
+        Queue<HuffmanNode*> q(num * 2 - 1);
+        HuffmanNode* temp;
 
-    bool empty() const {//判断是否为空
-        return (stackTop == -1);
-    }
-
-    int Size() const {//拿取栈的大小
-        return stackTop + 1;
-    }
-
-    T& top() {//返回栈顶的值
-        return stack[stackTop];
-    }
-
-    void pop() {//删除栈顶的值
-        if (stackTop == -1) {
-            return ;
-        }
-        stackTop--;
-    }
-
-    void push(const T& the_ele) {//压入
-        if (stackTop == size - 1) {//扩容
-            size *= 2;
-            T* temp = new T[size];
-            for (int i = 0; i <= stackTop; i++) {
-                temp[i] = stack[i];
-            }
-            delete[] stack;
-            stack = temp;
-        }
-
-        stack[++stackTop] = the_ele;
-    }
-};
-
-template<class T>
-
-class Queue {
-private:
-	int queuefront;//第一个数前一个位置的索引
-	int queueback;//最后一个数的索引
-	int arraylength;//队列长度
-	T* queue0;
-public:
-	Queue(int l) {
-		arraylength = l;
-		queue0 = new T[arraylength];
-		queuefront = queueback = 0;
-	}
-	~Queue() { delete[] queue0; }
-	bool empty()const { return queuefront==queueback; }//是否为空
-	int qsize()const { return queueback - queuefront; }//列表大小
-	T& front() { return queue0[queuefront]; }//第一个位置
-	void pop() {//删除
-		queuefront++;
-	}
-	void push(T& theelement) {//插入
-		queue0[queueback] = theelement;
-		queueback++; 
-	}
-};
-
-
-// 节点类声明
-template <class T>
-class binaryTreeNode {
-public:
-    T element;
-    binaryTreeNode<T>* left_child;
-    binaryTreeNode<T>* right_child;
-
-    binaryTreeNode() {
-        left_child = right_child = NULL;
-    }
-
-    binaryTreeNode(const T& ele) {
-        element = ele;
-        left_child = right_child = NULL;
-    }
-
-    binaryTreeNode(const T& ele, binaryTreeNode<T>* left_child, binaryTreeNode<T>* right_child) {
-        element = ele;
-        this->left_child = left_child;
-        this->right_child = right_child;
-    }
-};
-
-// 二叉树类声明
-template <class T>
-class binaryTree {
-public:
-    binaryTreeNode<T>* root;
-    binaryTreeNode<T>** treenode; // 节点的指针数组 
-    int tree_size;
-
-    binaryTree(){
-        root = NULL;
-    }
-
-    binaryTree(int t) {
-        root = new binaryTreeNode<T>(1); // 初始化根节点
-        tree_size = t;
-        treenode = new binaryTreeNode<T>*[tree_size + 1]; // 给指针数组分配空间 
-        treenode[1] = root;
-
-        for(int i = 1; i <= tree_size; i++) {
-            int a, b;
-            cin >> a >> b;
-
-            binaryTreeNode<T>* x = treenode[i]; // 当前节点
-
-            if (a != -1) {
-                x->left_child = new binaryTreeNode<T>(a);
-                treenode[a] = x->left_child; // 确保将左子节点存入正确位置
-            }
-            if (b != -1) {
-                x->right_child = new binaryTreeNode<T>(b);
-                treenode[b] = x->right_child; // 确保将右子节点存入正确位置
-            }
-        }
-    }
-
-    binaryTree(T root_element){
-        root = new binaryTreeNode<T>(root_element);
-    }
-
-    binaryTree<T> makeTree(T& element , binaryTree<T>& left , binaryTree<T>& right){
-        binaryTree<T> *temp= new binaryTree<T>(element);
-        temp->root->left_child = left.root;
-        temp->root->right_child = right.root;
-        return temp;
-    }
-
-    bool empty()const { return tree_size == 0; }
-
-    //前序遍历
-    void preOrder(binaryTreeNode<T>* node) {
-        if (node) {//node非空
-            cout << node->element << " ";
-            preOrder(node->left_child);
-            preOrder(node->right_child);
-        }
-    }
-
-    //中序遍历
-    void inOrder() {
-       Stack<binaryTreeNode<T>*> s(tree_size);//存放节点的栈
-       binaryTreeNode<T>* cur = root;
-       while (cur != NULL || !s.empty())
-       {
-            while (cur != NULL)
-            {
-                s.push(cur);
-                cur = cur->left_child;//一直往左压直到压到空
-            }
-            cur = s.top();//回溯
-            s.pop();
-            cout<< cur->element<<" ";
-            cur = cur->right_child;
-       }
-    }
-
-    //后序遍历
-    void postOrder(){
-        Stack<binaryTreeNode<T>*> s1(tree_size);//辅助栈，记录节点位置
-        Stack<binaryTreeNode<T>*> s2(tree_size);//存放节点顺序
-        binaryTreeNode<T>* cur = root;
-        while (cur != NULL || !s1.empty()) {
-            while (cur != NULL) {//先压全部的右边
-                s2.push(cur);
-                s1.push(cur);
-                cur = cur->right_child;
-            }
-            cur = s1.top();//压完了从栈顶开始往左压
-            s1.pop();
-            cur = cur->left_child;
-        }
-        //位置存完了
-        while (!s2.empty()) {
-            binaryTreeNode<T>* a = s2.top();
-            cout << a->element << " ";
-            s2.pop();
-        }
-    }
-
-    void levelOrder(){
-       Queue<binaryTreeNode<T>*> q(tree_size);//队列类层次遍历 
-        binaryTreeNode<T>* t; 
         q.push(root);
-        while (!q.empty()) {//层次遍历 
-            t = q.front();
-            cout << t->element << " ";
+        root->height = 0;
+        while (!q.empty()) {
+            temp = q.front();
             q.pop();
-            if (t->left_child != NULL) {
-                q.push(t->left_child);
-            }
-            if (t->right_child != NULL) {
-                q.push(t->right_child);
-            }
-        }
-    }
 
-    void numLevelOrder() {
-        Queue<binaryTreeNode<T>*> q(tree_size);//队列类层次遍历 
-        binaryTreeNode<T>* t;
-        int b[tree_size + 1];//以各节点为根的节点数 
-        q.push(root);
-        while (!q.empty()) {//层次遍历 
-            t = q.front();
-            b[t->element]=treeNum(t);//将节点数，存在对应节点的数组位置上 
-            q.pop();
-            if (t->left_child != NULL) {
-                q.push(t->left_child);
+            if (temp->leftchild != nullptr) {
+                q.push(temp->leftchild);
+                temp->leftchild->height = temp->height + 1;
             }
-            if (t->right_child != NULL) {
-                q.push(t->right_child);
+
+            if (temp->rightchild != nullptr) {
+                q.push(temp->rightchild);
+                temp->rightchild->height = temp->height + 1;
             }
-        }
-        for(int i=1;i<=tree_size;i++){
-            cout<<b[i]<<" ";
-        }
-        cout<<endl;
-    }
 
-
-    void heightLevelOrder() {
-        Queue<binaryTreeNode<T>*> q(tree_size);
-        binaryTreeNode<T>* t;
-        int b[tree_size + 1];//各节点高度 
-        q.push(root);
-        while (!q.empty()) {//层次遍历 
-            t = q.front();
-            b[t->element]=treeHeight(t);//将高度存到数组的对应位置 
-            q.pop();
-            if (t->left_child != NULL) {
-                q.push(t->left_child);
+            if (temp->leftchild == nullptr && temp->rightchild == nullptr) {
+                height += temp->height * temp->weight;
             }
-            if (t->right_child != NULL) {
-                q.push(t->right_child);
-            }
-        }
-        for(int i=1;i<=tree_size;i++){
-            cout<<b[i]<<" ";
-        }
-        cout<<endl;
-    }
 
-    int treeNum(binaryTreeNode<T>* node){
-      	if (node == NULL) return 0;
-        int nl = treeNum(node->left_child);//左子树节点数 
-        int nr = treeNum(node->right_child);//右子树节点数 
-        return (nl++)+(nr++)+1;
-    }
-
-    int treeHeight(binaryTreeNode<T>* node){
-        if (node == NULL) return 0;
-        int hl = treeHeight(node->left_child);//左子树的高 
-        int hr = treeHeight(node->right_child);//右子树的高 
-        if (hl > hr)return ++hl;
-        else return ++hr;
+        }
+        cout << height << endl;
     }
 };
-
-template<class T>
-class huffmanNode{
-public:
-    binaryTree<int> *tree;
-    T weight;
-};
-
-template<class T>
-binaryTree<int> HuffmanTree(T weight[] , int n ){
-    huffmanNode<T> *hNode new  huffmanNode<T>[n + 1];
-    binaryTree<int> emptyTree;
-    for(int i = 1 ; i <= n ; i++){
-        hNode[i].weight = weight[i];
-        //hNode[i].tree = new binaryTree<int>;
-        hNode[i].tree = makeTree(i , emptyTree , emptyTree);
-    }
-    //初始化为一个最小堆
-    minHeap<huffmanNode<T>> heap(n , hNode);
-    //取出两个树合并成一个，再放入
-    huffmanNode<T> x , y , w ;
-    binaryTree<int> *z;
-    for(int i = 1 ; i <n ; i++){
-        x = heap.top();heap.pop();
-        y = heap.top();heap.pop();
-        z = makeTree(0, *x.tree , *y.tree);
-        w.weight = w.weight + y.weight; w.tree = z;
-        heap.push(w);
-        delete x.tree;
-        delete y.tree;
-
-    }
-    return heap.top().tree;
-}
 
 int main() {
     string str;
-    cin>>str;
-    char element;
-    int *weight = new int[str.size()] , count;//count是不同元素的个数
-    //初始化
-    for(int i = 0 ; i < str.size() ; i++){
-        weight[i] = 0;
-    }
-    for(int i = 0 ; i < str.size() ; i++){
-        weight[(int)(str[i] - 'a')]++;
-    }
-    for(int i = 0 ; i < str.size() ; i++){
-        if(weight[i] != 0) count++;
-    }
+    cin >> str;
 
-    int *new_weight = new int[count];
-    count = 0;
-    for(int i = 0 ; i < str.size() ; i++){
-        if(weight[i] != 0){
-            new_weight[count] = weight[i];
-            count++;
-        } 
+    int* num = new int[26]();
+    int num_of_unique_letter = 0; 
+    for (char c : str) {
+        num[c - 'a']++;
+        if (num[c - 'a'] == 1) num_of_unique_letter++;
     }
+    int* b = new int[num_of_unique_letter];
+    int d = 0;
+    for (int i = 0; i < 26; i++) {
+        if (num[i] != 0) b[d++] = num[i];
+    }
+    huffmanTree huffman_tree(b, num_of_unique_letter);
+    huffman_tree.length();
+    delete[] num;
+    delete[] b;
     return 0;
 }
