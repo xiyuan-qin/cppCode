@@ -117,15 +117,14 @@ public:
         minHeap heap(heapArray, n);
         HuffmanNode *z, *l, *r;
         for (int i = 1; i < n; i++) {
-            l = heap.top();
-            heap.pop();
-            r = heap.top();
-            heap.pop();
+            l = heap.top();heap.pop();
+            r = heap.top();heap.pop();
+
             z = new HuffmanNode;
             z->leftchild = l;
             z->rightchild = r;
             z->weight = l->weight + r->weight;
-            heap.push(z);
+            heap.push(z);//最后栈顶是完好的树
         }
         num = n;
         root = heap.top();
@@ -141,8 +140,7 @@ public:
         q.push(root);
         root->height = 0;
         while (!q.empty()) {
-            temp = q.front();
-            q.pop();
+            temp = q.front();q.pop();
 
             if (temp->leftchild != nullptr) {
                 q.push(temp->leftchild);
