@@ -10,6 +10,7 @@ private:
     int queueback;   // 最后一个数的索引
     int arraylength; // 队列长度
     T* queue0;       // 队列数组
+
 public:
     Queue(int l) {
         arraylength = l;
