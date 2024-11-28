@@ -39,6 +39,7 @@ public:
 };
 
 // 最小堆
+// 特殊化模板类minHeap，霍夫曼节点的最小堆
 class minHeap {
     
 private:
@@ -109,16 +110,17 @@ private:
 public:
 
     huffmanTree(int* a, int n) { // 构造Huffman树
+        //创建一个霍夫曼树的指针数组用于构造最小堆
         HuffmanNode** heapArray = new HuffmanNode*[n];
         for (int i = 0; i < n; i++) {
             heapArray[i] = new HuffmanNode();
-            heapArray[i]->weight = a[i];
-        }
+            heapArray[i]->weight = a[i];//每次都把权值赋值给weight
+        }//此时数组里是每个给定的元素和它的权值，给定元素用下标表示
 
         minHeap heap(heapArray, n);
         HuffmanNode *z, *l, *r;
         for (int i = 1; i < n; i++) {
-            l = heap.top();heap.pop();
+            l = heap.top();heap.pop();//取出最小的两个
             r = heap.top();heap.pop();
 
             z = new HuffmanNode;
@@ -137,12 +139,13 @@ public:
         int height = 0;
         Queue<HuffmanNode*> q(num * 2 - 1);
         HuffmanNode* temp;
-
+        //中序遍历
         q.push(root);
         root->height = 0;
         while (!q.empty()) {
             temp = q.front();q.pop();
 
+            //每访问一次height加一
             if (temp->leftchild != nullptr) {
                 q.push(temp->leftchild);
                 temp->leftchild->height = temp->height + 1;
@@ -152,7 +155,7 @@ public:
                 q.push(temp->rightchild);
                 temp->rightchild->height = temp->height + 1;
             }
-
+            //访问到叶子节点时，计算高度
             if (temp->leftchild == nullptr && temp->rightchild == nullptr) {
                 height += temp->height * temp->weight;
             }
@@ -166,17 +169,21 @@ int main() {
     string str;
     cin >> str;
 
+    //统计每个字符出现的次数
     int* num = new int[26]();
     int num_of_unique_letter = 0; 
     for (char c : str) {
         num[c - 'a']++;
         if (num[c - 'a'] == 1) num_of_unique_letter++;
     }
+    //b是用来存储非0元素的数组
     int* b = new int[num_of_unique_letter];
     int d = 0;
     for (int i = 0; i < 26; i++) {
         if (num[i] != 0) b[d++] = num[i];
     }
+
+
     huffmanTree huffman_tree(b, num_of_unique_letter);
     huffman_tree.length();
     delete[] num;
