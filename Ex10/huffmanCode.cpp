@@ -139,7 +139,7 @@ public:
         int height = 0;
         Queue<HuffmanNode*> q(num * 2 - 1);
         HuffmanNode* temp;
-        //中序遍历
+        //层次遍历
         q.push(root);
         root->height = 0;
         while (!q.empty()) {
