@@ -235,7 +235,7 @@ public:
         }
     }
 
-    // 深度优先搜索
+    // 深度优先搜索,同时统计搜索到的数量和搜索路径
     void dfs(int u, bool *visited, int &num, int *array) {
         visited[u] = true;
         array[num++] = u;
@@ -265,37 +265,34 @@ public:
                 bfs(i, visited);
             }
         }
-        connected_component_num = result;
+        connected_component_num = result;//保存连通分量的个数
         delete[] visited;
         return result;
     }
 
     //输出所有连通子图中最小点的编号
     void min_node_in_connected_component(){
-        int *min_node = new int[connected_component_num];
-        for(int i = 0; i < connected_component_num; i++) {
-            min_node[i] = connected_component_pos[i];
-        }
-
-        // 对 min_node 数组进行简单排序
         // 由于连通分量的最小节点已经是按顺序添加的，可以直接输出
         for(int i = 0; i < connected_component_num; i++) {
-            cout << min_node[i] << " ";
+            cout << connected_component_pos[i] << " ";
         }
         cout << endl;
-        delete[] min_node;
     }
 
     void new_dfs(int start){
         int num = 0;
         int *array = new int[node_num + 1];
         bool *visited = new bool[node_num + 1]{false};
+
+        // 从start开始深度优先搜索，统计num和路径
         dfs(start, visited, num, array);
+
         cout << num << endl;
         for(int i = 0; i < num; i++) {
             cout << array[i] << " ";
         }
         cout << endl;
+
         delete[] array;
         delete[] visited;
     }
@@ -304,11 +301,14 @@ public:
         int num = 0;
         int *array = new int[node_num + 1];
         bool *visited = new bool[node_num + 1]{false};
+
         Queue<int> q(node_num + 1);
         q.push(t);
         visited[t] = true;
+        
         while (!q.empty()) {
             int w = q.front(); q.pop();
+
             array[num++] = w;
             chainNode<int> *temp = adj_list[w].first_node;
             while(temp != NULL){
@@ -320,11 +320,14 @@ public:
                 temp = temp->next;
             }
         }
+
         cout << num << endl;
+
         for(int i = 0; i < num; i++) {
             cout << array[i] << " ";
         }
         cout << endl;
+
         delete[] array;
         delete[] visited;
     }
@@ -334,20 +337,25 @@ public:
             cout << 0 << endl;
             return;
         }
+
         bool *visited = new bool[node_num + 1]{false};
-        int *distance = new int[node_num + 1]{0};
+        int *distance = new int[node_num + 1]{0};//每个节点到s的距离
+
         Queue<int> q(node_num + 1);
         q.push(s);
         visited[s] = true;
+
         while (!q.empty()) {
             int w = q.front(); q.pop();
             chainNode<int> *temp = adj_list[w].first_node;
+
             while(temp != NULL){
                 int v = temp->ele_value;
                 if (!visited[v]) {
                     visited[v] = true;
-                    distance[v] = distance[w] + 1;
-                    if(v == t){
+                    distance[v] = distance[w] + 1;//把v到s的距离更新为上一个节点w到s的距离+1
+                    
+                    if(v == t){//找到t
                         cout << distance[v] << endl;
                         delete[] visited;
                         delete[] distance;
@@ -358,6 +366,7 @@ public:
                 temp = temp->next;
             }
         }
+
         cout << -1 << endl;
         delete[] visited;
         delete[] distance;
@@ -382,10 +391,12 @@ int main(){
             break;
         }
     }
+    
     cout<<graph.connected_component()<<endl;
     graph.min_node_in_connected_component();
     graph.new_dfs(s);
     graph.new_bfs(t);
     graph.search(s, t);
+    
     return 0;
 }
