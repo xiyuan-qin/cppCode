@@ -1,11 +1,11 @@
 #include<iostream>
 using namespace std;
 
-class vertexNode {
+class vertexNode {// 顶点节点类
 public:
-    int weight;
-    int element;
-    vertexNode* next;
+    int weight; // 从起始点到该点的 边 的权重
+    int element;// 顶点编号
+    vertexNode* next;// 指向下一个节点的指针
 
     vertexNode() {
         weight = 0;
@@ -18,9 +18,15 @@ public:
         this->weight = weight;
         this->next = NULL;
     }
+
+    vertexNode(const int& element, const int& weight, vertexNode* next) {
+        this->element = element;
+        this->weight = weight;
+        this->next = next;
+    }
 };
 
-int reach[2000000] = { 0 };//记录是否到达过该点
+int reach[2000000] = { 0 };//题目给的最大数量限制
 
 class minHeap {
 private:
@@ -42,7 +48,7 @@ public:
 
     vertexNode& top() { return heap[1]; }
 
-    void push(vertexNode x) {
+    void push(const vertexNode &x) {
         if (heap_size == array_length - 1) {
             array_length *= 2;
             vertexNode* new_heap = new vertexNode[array_length]; 
@@ -79,51 +85,49 @@ public:
 
 class graph {
 private:
-    int num_vertices;  
-    int num_edges;     
-    vertexNode* list;
+    int num_vertices;  // 顶点数
+    int num_edges;     // 边数
+    vertexNode* list;// 邻接表的头指针数组
 public:
     graph(int n, int e) {
         num_vertices = n;
         num_edges = e;
-        list = new vertexNode[n + 1];
+        list = new vertexNode[n + 1];// 从1-n个顶点
         for (int i = 1; i <= n; i++) {
-            list[i].element = i;
+            list[i].element = i;// 节点的编号
             list[i].next = NULL;
-            list[i].weight = 0;
+            list[i].weight = 0;// 到下一个节点的权重
         }
     }
 
     void insert(int start_vertex, int end_vertex, int weight) {  
-        vertexNode* insert_node = new vertexNode(end_vertex, weight);
-        vertexNode* next_node = list[start_vertex].next;
-        if (next_node == NULL) {
-            list[start_vertex].next = insert_node;
+        if (list[start_vertex].next == NULL) {// 如果该节点下一个为空
+            list[start_vertex].next = new vertexNode(end_vertex, weight);
         }
-        else {
-            list[start_vertex].next = insert_node; 
-            insert_node->next = next_node;
+        else {// 如果不为空，插入到链表的头部
+            list[start_vertex].next = new vertexNode(end_vertex, weight, list[start_vertex].next);
         }
         
-        // 处理无向图的另一个方向
-        vertexNode* reverse_node = new vertexNode(start_vertex, weight);  
-        vertexNode* reverse_next = list[end_vertex].next;                 
-        if (reverse_next == NULL) { 
-            list[end_vertex].next = reverse_node;
+        // 处理无向图的另一个方向          
+        if (list[end_vertex].next == NULL) { 
+            list[end_vertex].next = new vertexNode(start_vertex, weight);
         }
         else {
-            list[end_vertex].next = reverse_node; 
-            reverse_node->next = reverse_next;
+            list[end_vertex].next = new vertexNode(start_vertex, weight, list[end_vertex].next);
         }
+
+        // 维护边数
         num_edges++;
     }
 
     void prim() {
-        minHeap min_heap(num_vertices);  // 原mh
-        reach[1] = 1;
-        vertexNode* current_node = list[1].next;  // 原nextnode
-        long long total_weight = 0;               // 原sumw
-        for (int i = 2; i <= num_vertices; i++) {
+        minHeap min_heap(num_vertices);  
+        reach[1] = 1;// 第一个节点肯定到了
+
+        vertexNode* current_node = list[1].next;  
+        long long total_weight = 0;     
+
+        for (int i = 2; i <= num_vertices; i++) {// 遍历所有的节点
             while (current_node != NULL) {
                 if (reach[current_node->element] != 1) {
                     vertexNode new_node(current_node->element, current_node->weight);
@@ -131,12 +135,15 @@ public:
                 }
                 current_node = current_node->next;
             }
-            while (reach[min_heap.top().element] == 1) {
+            while (reach[min_heap.top().element] == 1) {// 把重复加进来的访问过的节点去掉
+                // 确保始终选择的是未访问顶点的最小权重边，避免了环的产生
                 min_heap.pop();
             }
             total_weight += min_heap.top().weight;
-            reach[min_heap.top().element] = 1;
-            current_node = list[min_heap.top().element].next;
+            reach[min_heap.top().element] = 1;//只把最小边的节点标记为已访问
+            current_node = list[min_heap.top().element].next;//把移动访问的指针移动到新节点
+            //但堆中仍保留着所有已访问顶点的未处理边
+            //最小堆会自动选择所有可用边中权重最小的
             min_heap.pop();
         }
         cout << total_weight << endl;

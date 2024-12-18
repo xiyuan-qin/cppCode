@@ -2,14 +2,13 @@
 using namespace std;
 
 template <class T>
-class weightedEdge
-{
+class weightedEdge{//加权边类
 public:
     int start;
     int end;
-    long long weight;  // 修改为long long类型
+    long long weight;  
 
-    weightedEdge() : start(0), end(0), weight(0) {} // 简化构造函数
+    weightedEdge() : start(0), end(0), weight(0) {} 
 };
 
 template <class T>
@@ -64,7 +63,7 @@ private:
 
 public:
     DisjointSet(int n) {
-        parent = new int[n + 1]();  // 使用()进行零初始化
+        parent = new int[n + 1]();  // 初始化
     }
 
     ~DisjointSet() {
@@ -107,8 +106,8 @@ int main()
     int edges_used = 0;
 
     while (!heap.empty() && edges_used < n - 1) {
-        auto edge = heap.top();
-        heap.pop();
+        weightedEdge<int> edge = heap.top();heap.pop();
+        
         int a = ds.find(edge.start);
         int b = ds.find(edge.end);
         if (a != b) {
