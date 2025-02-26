@@ -34,7 +34,7 @@ private:
 
 public:
     SkipList(int maxLvl, float p = 0.5) : maxLevel(maxLvl), currentLevel(1), probability(p) {
-        header = new SkipNode(INT_MIN, maxLevel);
+        header = new SkipNode(INT_MIN, maxLevel);// 创建头节点
         srand(time(0));
     }
 
@@ -69,20 +69,20 @@ public:
         }
 
         current = current->next[0];
-        if (current && current->key == key) return;
+        if (current && current->key == key) return;//不用插入重复元素
 
-        int newLevel = randomLevel();
+        int newLevel = randomLevel();//插入的层数
         if (newLevel > currentLevel) {
             for (int i = currentLevel; i < newLevel; i++)
                 update[i] = header;
             currentLevel = newLevel;
-        }
+        }//超出的话就把多出来的层的update都指向头节点，相当于头节点就是最后一个小于插入元素的节点
 
         SkipNode* newNode = new SkipNode(key, newLevel);
         for (int i = 0; i < newLevel; i++) {
             newNode->next[i] = update[i]->next[i];
             update[i]->next[i] = newNode;
-        }
+        }//插
     }
 
     bool remove(int key) {
