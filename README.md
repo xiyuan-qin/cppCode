@@ -1,6 +1,34 @@
-## cppCode
+# cppCode
 cpp programs made in SDU
 
-Here is all the code made in sdu, mainly *data_structure* up to now.
-Maybe in the future time this repository will be cimmitted more types of codes.
-whatever
+## 项目简介
+这是在山东大学学习期间的 C++ 代码集合，主要包含数据结构相关实现。未来会持续更新其他类型的代码。
+
+## 项目结构
+```
+.
+├── data_structure/       # 数据结构相关实现
+│   ├── linked_list/     # 链表
+│   ├── tree/           # 树结构
+│   └── ...
+└── ...                 # 其他代码
+```
+
+## 主要内容
+- 数据结构实现
+  - 线性表
+  - 链表
+  - 树结构
+  - 图算法
+  - 排序算法
+
+## 使用说明
+1. 克隆仓库到本地
+2. 使用支持 C++ 的编译器编译运行 (推荐使用 g++)
+3. 每个实现都包含详细注释说明
+
+## 持续更新
+这个仓库会不断更新，包括但不限于：
+- 数据结构新实现
+- 算法练习
+- 课程项目代码
