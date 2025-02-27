@@ -8,12 +8,13 @@
 
 using namespace std;
 
-struct SkipNode {
+class SkipNode {
+public:
     int key;
     vector<SkipNode*> next;// 创建一个链表的指针数组，表示n层指针
 
-    SkipNode(int k, int level) {
-        this->key = k;
+    SkipNode(int key, int level) {
+        this->key = key;
         this->next = vector<SkipNode*>(level, nullptr);//创建新节点时只实例化，不连接
     }
 };
