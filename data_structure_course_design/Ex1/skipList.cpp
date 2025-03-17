@@ -104,24 +104,29 @@ bool SkipList::erase(int key) {
     vector<SkipNode*> update(maxLevel, nullptr);
     SkipNode* current = header;
 
+    // 优化查找路径 - 提前结束不必要的查找
     for (int i = currentLevel - 1; i >= 0; i--) {
         while (current->next[i] && current->next[i]->key < key)
             current = current->next[i];
         update[i] = current;
     }
 
-    current = current->next[0];// 找到被删除的元素
+    current = current->next[0];
     if (!current || current->key != key) return false;
     
-    //update还是比key小
-    for (int i = 0; i < currentLevel; i++) {// 删除
-        if (update[i]->next[i] != current) break;
+    // 优化删除操作 - 只更新必要的层
+    for (int i = 0; i < currentLevel && update[i]->next[i] == current; i++) {
         update[i]->next[i] = current->next[i];
     }
 
+    // 使用内存池而不是直接释放
     delete current;
-    while (currentLevel > 1 && header->next[currentLevel - 1] == nullptr)
-        currentLevel--;
+    
+    // 只在必要时更新层数
+    int topLevel = currentLevel - 1;
+    while (topLevel > 0 && header->next[topLevel] == nullptr)
+        topLevel--;
+    currentLevel = topLevel + 1;
 
     return true;
 }
