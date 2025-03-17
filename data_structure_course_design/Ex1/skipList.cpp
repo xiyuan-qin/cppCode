@@ -69,7 +69,7 @@ bool SkipList::search(int key) {
             current = current->next[i];
     }
     current = current->next[0];
-    return current != nullptr/*没找到*/ && current->key == key/*找到了*/;
+    return current != nullptr && current->key == key/*找到了*/;
 }
 
 void SkipList::insert(int key) {
@@ -104,7 +104,6 @@ bool SkipList::erase(int key) {
     vector<SkipNode*> update(maxLevel, nullptr);
     SkipNode* current = header;
 
-    // 优化查找路径 - 提前结束不必要的查找
     for (int i = currentLevel - 1; i >= 0; i--) {
         while (current->next[i] && current->next[i]->key < key)
             current = current->next[i];
@@ -114,15 +113,13 @@ bool SkipList::erase(int key) {
     current = current->next[0];
     if (!current || current->key != key) return false;
     
-    // 优化删除操作 - 只更新必要的层
     for (int i = 0; i < currentLevel && update[i]->next[i] == current; i++) {
         update[i]->next[i] = current->next[i];
     }
 
-    // 使用内存池而不是直接释放
     delete current;
     
-    // 只在必要时更新层数
+
     int topLevel = currentLevel - 1;
     while (topLevel > 0 && header->next[topLevel] == nullptr)
         topLevel--;
@@ -210,7 +207,7 @@ void SkipList::rebuildSkipList(SkipList& sk) {
         insert(key);
 }
 
-vector<int> SkipList::rangeQuery(int minKey, int maxKey) {// 查找范围内的元素
+/*vector<int> SkipList::rangeQuery(int minKey, int maxKey) {// 查找范围内的元素
     vector<int> result;
     SkipNode* current = header;
     
@@ -228,7 +225,7 @@ vector<int> SkipList::rangeQuery(int minKey, int maxKey) {// 查找范围内的�
     }
     
     return result;
-}
+}*/
 
 int SkipList::getCurrentLevel() const {
     return currentLevel;
@@ -238,9 +235,9 @@ int SkipList::getMaxLevel() const {
     return maxLevel;
 }
 
-// 主函数
 int main() {
     //随机一个种子
+    //用粗细时间来初始化随机数种子
     srand(time(nullptr) ^ (unsigned)chrono::system_clock::now().time_since_epoch().count());
     
     experiment();

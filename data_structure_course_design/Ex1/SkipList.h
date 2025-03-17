@@ -40,7 +40,7 @@ public:
     int deleteMin();
     int deleteMax();
     void rebuildSkipList(SkipList& sk);
-    std::vector<int> rangeQuery(int minKey, int maxKey);
+    // std::vector<int> rangeQuery(int minKey, int maxKey);
     int getCurrentLevel() const;
     int getMaxLevel() const;
 };

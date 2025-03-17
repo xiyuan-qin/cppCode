@@ -447,7 +447,6 @@ void experiment() {
     cout << "  │   删除    │   O(log n)     │   O(n)         │" << endl;
     cout << "  │ 删除最小  │   O(1)         │   O(n)         │" << endl;
     cout << "  │ 删除最大  │   O(log n)     │   O(1)         │" << endl;
-    cout << "  │ 范围查询  │ O(log n + k)   │ O(log n + k)   │" << endl;
     cout << "  └───────────┴────────────────┴────────────────┘" << endl;
     cout << "    注: n 为元素总数，k 为范围内元素数量\n" << endl;
     
