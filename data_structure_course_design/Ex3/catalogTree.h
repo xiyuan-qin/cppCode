@@ -5,6 +5,7 @@
 #include<queue>
 #include<algorithm>
 #include<sstream>
+#include<fstream> // 添加文件操作头文件
 
 using namespace std;
 
@@ -30,7 +31,9 @@ public:
 
 class catalogTree {
 public:
-
+    // 定义数据文件目录常量
+    const string DATA_DIR = "./dat/";
+    
     catalogTreeNode* root;
     catalogTreeNode* current;
 
@@ -99,19 +102,33 @@ public:
             return false; // 不是绝对路径
         }
         
+        // 先回到根目录
+        current = root;
+        
+        // 如果路径就是根目录，直接返回成功
+        if (path == "/") {
+            return true;
+        }
+        
         vector<string> pathComponents = parsePath(path);
         if (pathComponents.empty()) {
             return false;
         }
         
-        // 回到根目录
-        while(cd_()) {
-            // 持续返回上级直到根目录
-        }
-        
-        // 跳过第一个元素(根目录标记)
+        // 跳过第一个元素(根目录标记)，逐级查找目录
         for (size_t i = 1; i < pathComponents.size(); i++) {
-            if (!cd(pathComponents[i])) {
+            bool found = false;
+            for (auto child : current->children) {
+                // 检查目录名是否匹配（不带/）
+                string dirName = child->isFile ? child->name : child->name.substr(0, child->name.length() - 1);
+                if (dirName == pathComponents[i] && !child->isFile) {
+                    current = child;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
                 cout << "路径错误：" << pathComponents[i] << " 不存在" << endl;
                 return false;
             }
@@ -156,7 +173,7 @@ public:
 
     bool cd_() {
         if(current->parent == nullptr) {
-            // cout << "当前目录已经是根目录" << endl;
+            cout << "当前目录已经是根目录" << endl;
             return false;
         }
         current = current->parent;
@@ -165,16 +182,18 @@ public:
 
     bool cd(string name) {
         for(auto i : current->children) {
-            if(i->name == name + "/") {
-                current = i;
-                return true;
+            // 对于目录，比较不带斜杠的名称
+            if (!i->isFile) {
+                string dirName = i->name.substr(0, i->name.length() - 1);
+                if (dirName == name) {
+                    current = i;
+                    return true;
+                }
             }
         }
-        //TODO: cd进绝对路径
-        // cout << "未找到该目录" << endl;
+        cout << "未找到该目录" << endl;
         return false;
     }
-
 
     void mkdir(string name) {
         catalogTreeNode* temp = new catalogTreeNode(name + "/");
@@ -199,6 +218,131 @@ public:
             }
         }
         cout << "未找到该目录或文件" << endl;
+    }
+
+    // 递归保存目录树结构的辅助函数
+    void saveTreeHelper(catalogTreeNode* node, ofstream& file, string path) {
+        // 保存当前节点
+        file << path << " " << (node->isFile ? "1" : "0") << endl;
+        
+        // 递归保存子节点
+        for(auto child : node->children) {
+            string childPath = path;
+            if(path != "/") // 避免路径中出现双斜杠
+                childPath += child->name;
+            else
+                childPath = path + child->name;
+            saveTreeHelper(child, file, childPath);
+        }
+    }
+
+    // 保存目录树到文件
+    void save(string filename) {
+        // 构建完整的文件路径，保存到dat文件夹
+        string fullPath = DATA_DIR + filename;
+        ofstream file(fullPath);
+        if(!file) {
+            cout << "无法打开文件进行保存，请确保 " << DATA_DIR << " 目录存在" << endl;
+            return;
+        }
+        
+        saveTreeHelper(root, file, "/");
+        file.close();
+        cout << "目录树已保存到 " << fullPath << endl;
+    }
+
+    // 递归删除节点及其所有子节点
+    void deleteNode(catalogTreeNode* node) {
+        if(!node) return;
+        
+        // 先删除所有子节点
+        for(auto& child : node->children) {
+            deleteNode(child);
+        }
+        
+        // 删除节点本身
+        delete node;
+    }
+
+    // 从字符串路径创建目录结构
+    void createPathFromString(string path, bool isFile) {
+        // 如果路径是根节点，已经存在，不需要创建
+        if(path == "/") return;
+        
+        vector<string> components = parsePath(path);
+        if(components.empty()) return;
+        
+        catalogTreeNode* currentNode = root;
+        
+        // 从根开始遍历路径
+        for(size_t i = 1; i < components.size(); i++) {
+            string component = components[i];
+            bool isLastComponent = (i == components.size() - 1);
+            
+            // 查找子节点中是否已存在此组件
+            bool found = false;
+            for(auto child : currentNode->children) {
+                string childName;
+                if(child->isFile)
+                    childName = child->name;
+                else
+                    childName = child->name.substr(0, child->name.length() - 1);
+                
+                if(childName == component) {
+                    currentNode = child;
+                    found = true;
+                    break;
+                }
+            }
+            
+            // 如果不存在，创建新节点
+            if(!found) {
+                catalogTreeNode* newNode;
+                
+                if(isLastComponent && isFile) {
+                    newNode = new catalogTreeNode(component);
+                    newNode->isFile = true;
+                } else {
+                    newNode = new catalogTreeNode(component + "/");
+                }
+                
+                newNode->parent = currentNode;
+                currentNode->children.push_back(newNode);
+                currentNode = newNode;
+            }
+        }
+    }
+
+    // 从文件加载目录树
+    void load(string filename) {
+        // 构建完整的文件路径，从dat文件夹加载
+        string fullPath = DATA_DIR + filename;
+        ifstream file(fullPath);
+        if(!file) {
+            cout << "无法打开文件 " << fullPath << endl;
+            return;
+        }
+        
+        // 清除现有树结构，但保留根节点
+        for(auto& child : root->children) {
+            deleteNode(child);
+        }
+        root->children.clear();
+        current = root;
+        
+        string line;
+        while(getline(file, line)) {
+            stringstream ss(line);
+            string path;
+            int isFile;
+            ss >> path >> isFile;
+            
+            // 创建路径
+            createPathFromString(path, isFile == 1);
+        }
+        
+        file.close();
+        cout << "目录树已从 " << fullPath << " 加载" << endl;
     }
 };
 

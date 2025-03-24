@@ -34,6 +34,14 @@ int main() {
             string name;
             cin >> name;
             tree.rm(name);
+        } else if (command == "save") {
+            string filename;
+            cin >> filename;
+            tree.save(filename);
+        } else if (command == "load") {
+            string filename;
+            cin >> filename;
+            tree.load(filename);
         } else {
             cout << "未知命令" << endl;
         }
