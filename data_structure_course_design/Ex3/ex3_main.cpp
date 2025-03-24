@@ -9,7 +9,7 @@ int main() {
     string command;
     while (1) {
         cout << "请输入命令：";
-        cin >> command && command != "q";
+        cin >> command;
         if (command == "q") {
             break;
         } 
@@ -21,9 +21,7 @@ int main() {
         } else if (command == "cd") {
             string name;
             cin >> name;
-            tree.cd(name);
-        } else if (command == "cd_") {
-            tree.cd_();
+            tree.handleCdCommand(name);
         } else if (command == "mkdir") {
             string name;
             cin >> name;
