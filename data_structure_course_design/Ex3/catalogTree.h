@@ -344,5 +344,39 @@ public:
         file.close();
         cout << "目录树已从 " << fullPath << " 加载" << endl;
     }
+
+    // 打印整个目录树结构
+    void tree() {
+        cout << "目录结构:" << endl;
+        cout << root->name << endl;
+        printTreeNode(root, "");
+    }
+
+    // 递归打印树节点的辅助函数
+    void printTreeNode(catalogTreeNode* node, string indent) {
+        // 按字母顺序对子节点进行排序（先目录后文件）
+        vector<catalogTreeNode*> dirs;
+        vector<catalogTreeNode*> files;
+        
+        for(auto child : node->children) {
+            if(child->isFile)
+                files.push_back(child);
+            else
+                dirs.push_back(child);
+        }
+        
+        // 先打印目录
+        for(size_t i = 0; i < dirs.size(); i++) {
+            bool isLast = (i == dirs.size() - 1 && files.empty());
+            cout << indent << (isLast ? "└── " : "├── ") << dirs[i]->name << endl;
+            printTreeNode(dirs[i], indent + (isLast ? "    " : "│   "));
+        }
+        
+        // 再打印文件
+        for(size_t i = 0; i < files.size(); i++) {
+            bool isLast = (i == files.size() - 1);
+            cout << indent << (isLast ? "└── " : "├── ") << files[i]->name << endl;
+        }
+    }
 };
 

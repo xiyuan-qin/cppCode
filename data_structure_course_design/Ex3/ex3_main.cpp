@@ -42,6 +42,8 @@ int main() {
             string filename;
             cin >> filename;
             tree.load(filename);
+        } else if (command == "tree") {
+            tree.tree();
         } else {
             cout << "未知命令" << endl;
         }
