@@ -10,7 +10,7 @@
 #include <cstdlib>
 #include <algorithm>
 
-// 系统变量结构体
+// 系统变量
 class Variable {
 public:
     Variable() {
@@ -28,15 +28,16 @@ public:
     char ch1, ch;            // 用户选择
 };
 
-// 顺串构造器结构体
-struct SequentialStringPlayer {
+// 顺串构造器
+class SequentialStringPlayer {
+public:
     int id, key;
     bool operator<=(SequentialStringPlayer &p) {
         return (id != p.id) ? (id < p.id) : (key < p.key);
     }
 };
 
-// 败者树基类接口
+// 输者树基类
 template <class T>
 class loserTree {
 public:
@@ -46,7 +47,7 @@ public:
     virtual void rePlay(int thePlayer, T newvalue) = 0;
 };
 
-// 最小败者树实现
+// 最小输者树
 template <class T>
 class MinimumLoserTree : public loserTree<T> {
 public:
@@ -82,11 +83,7 @@ private:
 template <class T>
 void MinimumLoserTree<T>::initialize(T* thePlayer, int theNumberOfPlayers) {
     int n = theNumberOfPlayers;
-    if (n < 2) {
-        std::cout << "Error! the number must >= 2" << std::endl;
-        return;
-    }
-    
+   
     player = thePlayer;
     numberOfPlayers = n;
     delete[] tree; 
