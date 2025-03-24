@@ -11,6 +11,7 @@
 #include <chrono>
 #include <iomanip>
 #include <sys/stat.h> // 用于创建目录
+#include <vector> // 用于多阶段归并
 
 // 检查目录是否存在
 bool dirExists(const std::string& path) {
@@ -68,7 +69,7 @@ void init(Variable &va) {
     srand(time(nullptr));
     for (int i = 1; i <= va.n; i++) {
         int x = rand() % 1000 + 1;
-        fout1 << x << ' ';
+        fout1 << x << ' ';// 将数据写入磁盘文件
         if (va.ch1 == 'y') 
             std::cout << x << ' ';
     }
@@ -166,10 +167,149 @@ void SequentialStringConstruction(Variable &va, SequentialStringPlayer* ssplayer
     }
 }
 
-// 生成最终结果
+// 多阶段归并处理函数
+int MultiStageMerge(Variable &va, const std::vector<std::string>& inputFiles, 
+                   const std::string& outputFile, bool isLastStage) {
+    int maxMergeWays = va.m; // 最多使用缓冲区大小作为归并路数
+    int totalFiles = inputFiles.size();
+    int mergeGroups = (totalFiles + maxMergeWays - 1) / maxMergeWays; // 向上取整，计算需要多少组
+    std::vector<std::string> nextStageFiles;
+    
+    std::cout << "多阶段归并: " << totalFiles << "个文件，分为" << mergeGroups << "组进行处理" << std::endl;
+    
+    for (int group = 0; group < mergeGroups; group++) {
+        // 计算当前组的起始和结束索引
+        int startIdx = group * maxMergeWays;
+        int endIdx = std::min((group + 1) * maxMergeWays, totalFiles);
+        int currentGroupSize = endIdx - startIdx;
+        
+        // 当前组只有一个文件并且是最后一组，直接复制到输出
+        if (currentGroupSize == 1 && group == mergeGroups - 1 && isLastStage) {
+            std::ifstream inFile(inputFiles[startIdx]);
+            std::ofstream outFile(outputFile);
+            int value;
+            while (inFile >> value) {
+                outFile << value << " ";
+                va.visitDiskTime += 2; // 读和写
+            }
+            inFile.close();
+            outFile.close();
+            return 1; // 返回剩余文件数
+        }
+        
+        // 确定当前组的输出文件名
+        std::string currentOutputFile;
+        if (mergeGroups == 1 && isLastStage) {
+            currentOutputFile = outputFile;
+        } else {
+            currentOutputFile = va.path + "stageMerge_" + std::to_string(group) + ".txt";
+            nextStageFiles.push_back(currentOutputFile);
+        }
+        
+        std::cout << "处理组 " << (group + 1) << "/" << mergeGroups
+                  << " (" << currentGroupSize << " 个文件)" << std::endl;
+                  
+        // 准备K路归并
+        int* dplayer = new int[currentGroupSize + 1];
+        int* pointer = new int[currentGroupSize + 1];
+        std::vector<std::ifstream*> fileStreams(currentGroupSize + 1);
+        
+        // 初始化每个文件的第一个值和指针位置
+        for (int i = 0; i < currentGroupSize; i++) {
+            fileStreams[i + 1] = new std::ifstream(inputFiles[startIdx + i]);
+            *fileStreams[i + 1] >> dplayer[i + 1];
+            pointer[i + 1] = fileStreams[i + 1]->tellg();
+            va.visitDiskTime++;
+        }
+        
+        // 构建败者树
+        MinimumLoserTree<int> dtree(dplayer, currentGroupSize);
+        
+        // 打开输出文件
+        std::ofstream outFile(currentOutputFile);
+        int fileElementCount = 0;
+        
+        // K路归并过程
+        while (true) {
+            int winnerIdx = dtree.getTheWinner();
+            int winner = dplayer[winnerIdx];
+            
+            // 写入当前最小值
+            outFile << winner << " ";
+            fileElementCount++;
+            va.visitDiskTime++;
+            
+            // 从获胜文件读取下一个值
+            std::ifstream* fin = fileStreams[winnerIdx];
+            fin->clear();
+            fin->seekg(pointer[winnerIdx] + 1);
+            
+            int nextVal;
+            if (!(*fin >> nextVal)) {
+                // 文件结束，使用最大值代替
+                nextVal = INT_MAX;
+            } else {
+                pointer[winnerIdx] = fin->tellg();
+                va.visitDiskTime++;
+            }
+            
+            // 更新败者树
+            dtree.rePlay(winnerIdx, nextVal);
+            
+            // 检查是否所有文件都已处理完
+            bool allDone = true;
+            for (int i = 1; i <= currentGroupSize; i++) {
+                if (dplayer[i] != INT_MAX) {
+                    allDone = false;
+                    break;
+                }
+            }
+            
+            if (allDone) break;
+            
+            // 显示进度
+            if (fileElementCount % 10000 == 0) {
+                std::cout << "已处理 " << fileElementCount << " 个元素" << std::endl;
+            }
+        }
+        
+        outFile.close();
+        
+        // 清理资源
+        for (int i = 1; i <= currentGroupSize; i++) {
+            fileStreams[i]->close();
+            delete fileStreams[i];
+        }
+        delete[] dplayer;
+        delete[] pointer;
+    }
+    
+    // 递归处理下一阶段
+    if (nextStageFiles.size() > 1) {
+        return MultiStageMerge(va, nextStageFiles, outputFile, true);
+    } else if (nextStageFiles.size() == 1) {
+        // 只有一个中间文件，直接重命名为最终输出
+        if (isLastStage) {
+            std::ifstream inFile(nextStageFiles[0]);
+            std::ofstream outFile(outputFile);
+            int value;
+            while (inFile >> value) {
+                outFile << value << " ";
+                va.visitDiskTime += 2;
+            }
+            inFile.close();
+            outFile.close();
+        }
+        return 1;
+    }
+    
+    return mergeGroups;
+}
+
+// 修改最终结果生成函数，直接使用多阶段归并
 void GenerateTheFinalResult(Variable &va) {
     std::cout << "\n┌───────────────────────────────────────────────────────┐" << std::endl;
-    std::cout << "│            开始K路归并...                             │" << std::endl;
+    std::cout << "│            开始多阶段K路归并...                       │" << std::endl;
     std::cout << "└───────────────────────────────────────────────────────┘\n" << std::endl;
     
     std::cout << "请问是否将最终排序结果放入原文件，如果否，则程序将新建一个Disk2.txt文件并放入此文件中（输入'y'或'n'代表'是'与'否')："; 
@@ -183,11 +323,11 @@ void GenerateTheFinalResult(Variable &va) {
 
     auto startTime = std::chrono::high_resolution_clock::now();
     
-    std::ofstream fout3(newFile);
-
-    if (va.numberOfDisk == 1) { // 只生成了一个顺串文件，直接将其加入目标文件
+    // 处理只有一个顺串的情况
+    if (va.numberOfDisk == 1) {
         std::cout << "只有一个顺串，直接复制到目标文件..." << std::endl;
         
+        std::ofstream fout3(newFile);
         std::string smallfile = va.path + "smallfile" + std::to_string(1) + ".txt";
         std::ifstream fin4(smallfile);
         int tempnumber;
@@ -219,72 +359,51 @@ void GenerateTheFinalResult(Variable &va) {
         }
         return;
     }
-
-    std::cout << "初始化" << va.numberOfDisk << "路归并..." << std::endl;
     
-    // 初始化K路归并
-    int* dplayer = new int[va.numberOfDisk + 10]; // 初始化队列
-    int* pointer = new int[va.numberOfDisk + 10]; // 各个小磁盘文件的指针
+    // 直接采用多阶段归并方法
+    std::cout << "使用多阶段K路归并 (缓冲区大小m=" << va.m << ")..." << std::endl;
     
+    // 计算多阶段归并的理论阶段数
+    int numberOfRuns = va.numberOfDisk;
+    int bufferSize = va.m;
+    int theoreticalStages = 0;
+    int temp = numberOfRuns;
+    while (temp > 1) {
+        temp = (temp + bufferSize - 1) / bufferSize; // 向上取整
+        theoreticalStages++;
+    }
+    
+    std::cout << "理论归并阶段数: " << theoreticalStages << std::endl;
+    
+    // 准备初始顺串列表
+    std::vector<std::string> inputFiles;
     for (int i = 1; i <= va.numberOfDisk; i++) {
-        std::string smallfile = va.path + "smallfile" + std::to_string(i) + ".txt";
-        std::ifstream fin2(smallfile);
-        fin2 >> dplayer[i];
-        pointer[i] = fin2.tellg();
-        fin2.close();
+        inputFiles.push_back(va.path + "smallfile" + std::to_string(i) + ".txt");
     }
     
-    std::cout << "创建败者树进行归并..." << std::endl;
-    MinimumLoserTree<int> dtree(dplayer, va.numberOfDisk);
-    int cnt = 0;
-    
-    std::cout << "开始归并处理..." << std::endl;
-    while (cnt < va.n) {
-        cnt++;
-        int temp = dtree.getTheWinner();
-        int tempwinner = dplayer[temp];
-        fout3 << tempwinner << ' ';
-        va.visitDiskTime++;
-        
-        std::string smallfile = va.path + "smallfile" + std::to_string(temp) + ".txt";
-        std::ifstream fin3(smallfile);
-        fin3.clear(); 
-        fin3.seekg(pointer[temp] + 1);
-
-        int tempnum;
-        if (pointer[temp] + 1 == 0) 
-            tempnum = INT_MAX;
-        else {
-            fin3 >> tempnum;
-            pointer[temp] = fin3.tellg();
-            if (pointer[temp] + 1 == 0) 
-                tempnum = INT_MAX;
-        }
-        
-        va.visitDiskTime++;
-        dtree.rePlay(temp, tempnum);
-        fin3.close();
-        
-        // 显示进度
-        if (cnt % (va.n / 10) == 0) {
-            std::cout << "已处理: " << cnt * 100 / va.n << "%" << std::endl;
-        }
-    }
-    
-    fout3.close();
-    delete[] dplayer;
-    delete[] pointer;
+    // 执行多阶段归并
+    int actualStages = MultiStageMerge(va, inputFiles, newFile, true);
     
     auto endTime = std::chrono::high_resolution_clock::now();
     double elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
     
     std::cout << "\n┌───────────────────────────────────────────────────────┐" << std::endl;
-    std::cout << "│            归并完成                                   │" << std::endl;
+    std::cout << "│            多阶段归并完成                             │" << std::endl;
     std::cout << "├───────────────────────────────────────────────────────┤" << std::endl;
     std::cout << "│  磁盘访问次数: " << std::setw(8) << va.visitDiskTime << std::setw(27) << "│" << std::endl;
     std::cout << "│  用时: " << std::setw(8) << elapsedTime << " ms" << std::setw(27) << "│" << std::endl;
-    std::cout << "│  归并路数: " << std::setw(8) << va.numberOfDisk << std::setw(27) << "│" << std::endl;
+    std::cout << "│  归并路数: " << std::setw(8) << va.m << std::setw(27) << "│" << std::endl;
+    std::cout << "│  归并阶段数: " << std::setw(8) << actualStages << std::setw(27) << "│" << std::endl;
     std::cout << "└───────────────────────────────────────────────────────┘\n" << std::endl;
+    
+    // 打印关键理论指标
+    int totalIO = va.visitDiskTime;
+    int theoreticalIO = (2 * va.n * (theoreticalStages + 1)); // 理论I/O次数
+    
+    std::cout << "理论分析:\n" << std::endl;
+    std::cout << "  - 理论最优I/O次数: " << theoreticalIO << std::endl;
+    std::cout << "  - 实际I/O次数: " << totalIO << std::endl;
+    std::cout << "  - I/O效率: " << (theoreticalIO > 0 ? (double)theoreticalIO / totalIO * 100 : 0) << "%" << std::endl << std::endl;
     
     if (va.ch1 == 'y') {
         std::cout << "最终外排序结果如下：" << std::endl;
