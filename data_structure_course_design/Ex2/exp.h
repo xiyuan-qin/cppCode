@@ -177,25 +177,25 @@ int MultiStageMerge(Variable &va, const std::vector<std::string>& inputFiles,
     
     std::cout << "多阶段归并: " << totalFiles << "个文件，分为" << mergeGroups << "组进行处理" << std::endl;
     
+    // 只有一个文件时直接作为结果
+    if (totalFiles == 1 && isLastStage) {
+        std::ifstream inFile(inputFiles[0]);
+        std::ofstream outFile(outputFile);
+        int value;
+        while (inFile >> value) {
+            outFile << value << " ";
+            va.visitDiskTime += 2; // 读和写
+        }
+        inFile.close();
+        outFile.close();
+        return 1;
+    }
+    
     for (int group = 0; group < mergeGroups; group++) {
         // 计算当前组的起始和结束索引
         int startIdx = group * maxMergeWays;
         int endIdx = std::min((group + 1) * maxMergeWays, totalFiles);
         int currentGroupSize = endIdx - startIdx;
-        
-        // 当前组只有一个文件并且是最后一组，直接复制到输出
-        if (currentGroupSize == 1 && group == mergeGroups - 1 && isLastStage) {
-            std::ifstream inFile(inputFiles[startIdx]);
-            std::ofstream outFile(outputFile);
-            int value;
-            while (inFile >> value) {
-                outFile << value << " ";
-                va.visitDiskTime += 2; // 读和写
-            }
-            inFile.close();
-            outFile.close();
-            return 1; // 返回剩余文件数
-        }
         
         // 确定当前组的输出文件名
         std::string currentOutputFile;
@@ -208,6 +208,20 @@ int MultiStageMerge(Variable &va, const std::vector<std::string>& inputFiles,
         
         std::cout << "处理组 " << (group + 1) << "/" << mergeGroups
                   << " (" << currentGroupSize << " 个文件)" << std::endl;
+        
+        // 当前组只有一个文件时，直接复制到输出
+        if (currentGroupSize == 1) {
+            std::ifstream inFile(inputFiles[startIdx]);
+            std::ofstream outFile(currentOutputFile);
+            int value;
+            while (inFile >> value) {
+                outFile << value << " ";
+                va.visitDiskTime += 2; // 读和写
+            }
+            inFile.close();
+            outFile.close();
+            continue; // 处理下一组
+        }
                   
         // 准备K路归并
         int* dplayer = new int[currentGroupSize + 1];
@@ -284,23 +298,20 @@ int MultiStageMerge(Variable &va, const std::vector<std::string>& inputFiles,
         delete[] pointer;
     }
     
-    // 递归处理下一阶段
-    if (nextStageFiles.size() > 1) {
+    // 对下一阶段文件进行处理
+    if (nextStageFiles.size() > 1 || (nextStageFiles.size() == 1 && !isLastStage)) {
         return MultiStageMerge(va, nextStageFiles, outputFile, true);
-    } else if (nextStageFiles.size() == 1) {
-        // 只有一个中间文件，直接重命名为最终输出
-        if (isLastStage) {
-            std::ifstream inFile(nextStageFiles[0]);
-            std::ofstream outFile(outputFile);
-            int value;
-            while (inFile >> value) {
-                outFile << value << " ";
-                va.visitDiskTime += 2;
-            }
-            inFile.close();
-            outFile.close();
+    } else if (nextStageFiles.size() == 1 && isLastStage) {
+        // 只有一个中间文件且是最后阶段，复制到最终输出
+        std::ifstream inFile(nextStageFiles[0]);
+        std::ofstream outFile(outputFile);
+        int value;
+        while (inFile >> value) {
+            outFile << value << " ";
+            va.visitDiskTime += 2;
         }
-        return 1;
+        inFile.close();
+        outFile.close();
     }
     
     return mergeGroups;
