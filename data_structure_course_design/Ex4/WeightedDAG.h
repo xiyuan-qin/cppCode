@@ -1,9 +1,13 @@
+#ifndef WEIGHTED_DAG_H
+#define WEIGHTED_DAG_H
+
 #include<iostream>
 #include<map>
 #include<set>
 #include<vector>
 #include<queue>
 #include<stack>
+#include<climits>
 
 using namespace std;
 
@@ -26,6 +30,8 @@ public:
     }
 };
 
+
+// 有向加权图类
 class WeightedDAG {
 private:
     int n; // 节点数量
@@ -78,31 +84,21 @@ public:
         
         return result.size() == n ? result : vector<int>();
     }
+
+    // 方法一：贪心算法解决设置信号放大器问题
+    int minimumAmplifiersGreedy(int sourceNode, double d);
+
+    // 方法二：动态规划解决设置信号放大器问题
+    int minimumAmplifiersDP(int sourceNode, double d);
+    
+    // 辅助方法：计算所有节点对之间的最短距离
+    vector<vector<double>> calculateAllPairsShortestPaths();
+    
+    // 获取节点数
+    int getNodeCount() const { return n; }
+    
+    // 获取邻接表
+    const vector<vector<pair<int, int>>>& getAdjList() const { return adj; }
 };
 
-int main(){
-    WeightedDAG g(6);
-    g.addEdge(0, 1, 5);
-    g.addEdge(0, 2, 3);
-    g.addEdge(1, 3, 6);
-    g.addEdge(1, 2, 2);
-    g.addEdge(2, 4, 4);
-    g.addEdge(2, 5, 2);
-    g.addEdge(3, 4, 1);
-    g.addEdge(4, 5, 2);
-
-    cout << g[1][3]<< endl;
-    cout << g[3][1]<< endl;
-    
-    vector<int> result = g.topologicalSort();
-    if (result.empty()) {
-        cout << "图中存在环，无法进行拓扑排序" << endl;
-    } else {
-        cout << "拓扑排序结果：";
-        for (int i = 0; i < result.size(); i++) {
-            cout << result[i] << " ";
-        }
-        cout << endl;
-    }
-    return 0;
-}
+#endif // WEIGHTED_DAG_H
