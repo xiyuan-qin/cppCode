@@ -10,18 +10,24 @@ int main() {
     while (1) {
         cout << "请输入命令：";
         cin >> command;
-        if (command == "q") {
+        if (command == "q" || command == "quit") {
             break;
         } 
         
-        if (command == "ls") {
+        if (command == "ls" || command == "dir") {
             tree.ls();
         } else if (command == "pwd") {
             tree.pwd();
         } else if (command == "cd") {
             string name;
-            cin >> name;
-            tree.handleCdCommand(name);
+            // 检查是否有额外输入
+            if (cin.peek() == '\n') {
+                // 无参数的cd命令，打印当前路径
+                tree.pwd();
+            } else {
+                cin >> name;
+                tree.handleCdCommand(name);
+            }
         } else if (command == "mkdir") {
             string name;
             cin >> name;
@@ -30,7 +36,7 @@ int main() {
             string name;
             cin >> name;
             tree.mkfile(name);
-        } else if (command == "rm") {
+        } else if (command == "rm" || command == "delete") {
             string name;
             cin >> name;
             tree.rm(name);
