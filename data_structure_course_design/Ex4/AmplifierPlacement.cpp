@@ -99,14 +99,22 @@ void Visualizer::visualizeSolution(const WeightedDAG& graph,
     // 创建一个可修改的图副本
     WeightedDAG graphCopy = graph;
     
-    // 获取放大器位置
-    std::vector<bool> amplifierLocations;
-    int minAmplifiers = graphCopy.minimumAmplifiersGreedy(sourceNode, maxDistance, &amplifierLocations);
+    // 获取贪心和动态规划算法的放大器位置
+    std::vector<bool> greedyLocations;
+    std::vector<bool> dpLocations;
+    
+    int greedyAmplifiers = graphCopy.minimumAmplifiersGreedy(sourceNode, maxDistance, &greedyLocations);
+    int dpAmplifiers = graphCopy.minimumAmplifiersDP(sourceNode, maxDistance, &dpLocations);
+    
+    // 使用放大器数量更少的结果
+    std::vector<bool>& finalLocations = (greedyAmplifiers <= dpAmplifiers) ? greedyLocations : dpLocations;
+    int finalCount = std::min(greedyAmplifiers, dpAmplifiers);
     
     // 可视化结果
-    visualizeResult(graphCopy, amplifierLocations, filename);
+    visualizeResult(graphCopy, finalLocations, filename);
     
-    std::cout << "图中放置了 " << minAmplifiers << " 个放大器，可视化结果已保存至: " << filename << std::endl;
+    std::cout << "图中放置了 " << finalCount << " 个放大器，可视化结果已保存至: " << filename << std::endl;
+    std::cout << "贪心算法: " << greedyAmplifiers << " 个放大器，动态规划: " << dpAmplifiers << " 个放大器" << std::endl;
 }
 
 // PerformanceTester 类实现
