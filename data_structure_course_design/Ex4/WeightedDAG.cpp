@@ -1,156 +1,201 @@
 #include "WeightedDAG.h"
 #include <algorithm>
 #include <limits>
+#include <queue>
+#include <set>
 
-// 方法一：贪心算法解决设置信号放大器问题
-int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double d) {
-    // 1. 获取拓扑排序
-    vector<int> topoOrder = topologicalSort();
+WeightedDAG::WeightedDAG(int nodeCount) : nodeCount_(nodeCount) {
+    adjacencyList_.resize(nodeCount);
+}
+
+void WeightedDAG::addEdge(int from, int to, int weight) {
+    if (from < 0 || from >= nodeCount_ || to < 0 || to >= nodeCount_) {
+        throw std::out_of_range("节点索引超出范围");
+    }
+    adjacencyList_[from].push_back({to, weight});
+}
+
+int WeightedDAG::getEdgeWeight(int from, int to) const {
+    if (from < 0 || from >= nodeCount_ || to < 0 || to >= nodeCount_) {
+        return -1;
+    }
+    
+    for (const auto& edge : adjacencyList_[from]) {
+        if (edge.first == to) {
+            return edge.second;
+        }
+    }
+    return -1;
+}
+
+std::vector<int> WeightedDAG::topologicalSort() const {
+    std::vector<int> inDegree(nodeCount_, 0);
+    
+    // 计算每个节点的入度
+    for (int i = 0; i < nodeCount_; i++) {
+        for (const auto& edge : adjacencyList_[i]) {
+            inDegree[edge.first]++;
+        }
+    }
+    
+    // 使用队列进行拓扑排序
+    std::queue<int> q;
+    for (int i = 0; i < nodeCount_; i++) {
+        if (inDegree[i] == 0) q.push(i);
+    }
+    
+    std::vector<int> result;
+    while (!q.empty()) {
+        int node = q.front(); q.pop();
+        result.push_back(node);
+        
+        for (const auto& edge : adjacencyList_[node]) {
+            if (--inDegree[edge.first] == 0) {
+                q.push(edge.first);
+            }
+        }
+    }
+    
+    return result.size() == nodeCount_ ? result : std::vector<int>();
+}
+
+int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance, 
+                                        std::vector<bool>* amplifierLocations) {
+    if (sourceNode < 0 || sourceNode >= nodeCount_) {
+        return -1;
+    }
+    
+    // 初始化放大器位置向量（如果提供）
+    if (amplifierLocations) {
+        amplifierLocations->assign(nodeCount_, false);
+    }
+    
+    // 获取拓扑排序
+    std::vector<int> topoOrder = topologicalSort();
     if (topoOrder.empty()) return -1; // 图不是DAG
     
-    // 2. 初始化累计距离数组，所有节点初始为无穷大
-    vector<double> distance(n, numeric_limits<double>::infinity());
-    distance[sourceNode] = 0; // 源点距离为0
+    // 初始化距离数组
+    std::vector<double> distance(nodeCount_, std::numeric_limits<double>::infinity());
+    distance[sourceNode] = 0;
     
-    // 3. 初始化放大器计数
+    // 放大器计数
     int amplifierCount = 0;
+    std::vector<bool> hasAmplifier(nodeCount_, false);
     
-    // 4. 记录放大器放置的位置
-    vector<bool> hasAmplifier(n, false);
-    
-    // 5. 按拓扑排序顺序处理每个节点
+    // 按拓扑顺序处理节点
     for (int node : topoOrder) {
-        // 如果该节点不可达，跳过
-        if (distance[node] == numeric_limits<double>::infinity())
+        if (distance[node] == std::numeric_limits<double>::infinity()) 
             continue;
             
-        // 检查所有出边
-        for (const auto& edge : adj[node]) {
+        for (const auto& edge : adjacencyList_[node]) {
             int nextNode = edge.first;
             double weight = edge.second;
             
-            // 如果当前节点到下一个节点的距离会超过d
-            if (distance[node] + weight > d) {
-                // 需要在当前节点放置放大器
-                if (!hasAmplifier[node]) {
-                    hasAmplifier[node] = true;
-                    amplifierCount++;
-                    // 重置当前节点的累计距离为0
-                    distance[node] = 0;
-                }
+            // 如果需要放置放大器
+            if (distance[node] + weight > maxDistance && !hasAmplifier[node]) {
+                hasAmplifier[node] = true;
+                amplifierCount++;
+                distance[node] = 0; // 重置累计距离
             }
             
-            // 更新下一个节点的距离
-            // 如果当前节点有放大器，下一节点距离就是边的权重
-            // 否则累加当前节点的距离
-            distance[nextNode] = min(distance[nextNode], 
-                                   hasAmplifier[node] ? weight : distance[node] + weight);
+            // 更新下一节点的距离
+            distance[nextNode] = std::min(distance[nextNode], distance[node] + weight);
         }
+    }
+    
+    // 如果提供了放大器位置数组，保存结果
+    if (amplifierLocations) {
+        *amplifierLocations = hasAmplifier;
     }
     
     return amplifierCount;
 }
 
-// 辅助方法：计算所有节点对之间的最短距离
-vector<vector<double>> WeightedDAG::calculateAllPairsShortestPaths() {
-    // 初始化距离矩阵，所有位置为无穷大
-    vector<vector<double>> dist(n, vector<double>(n, numeric_limits<double>::infinity()));
-    
-    // 自己到自己的距离为0
-    for (int i = 0; i < n; i++) {
-        dist[i][i] = 0;
+int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance, 
+                                    std::vector<bool>* amplifierLocations) {
+    if (sourceNode < 0 || sourceNode >= nodeCount_) {
+        return -1;
     }
     
-    // 初始化直接连接的边
-    for (int i = 0; i < n; i++) {
-        for (const auto& edge : adj[i]) {
-            dist[i][edge.first] = edge.second;
-        }
-    }
-    
-    // Floyd-Warshall算法
-    for (int k = 0; k < n; k++) {
-        for (int i = 0; i < n; i++) {
-            for (int j = 0; j < n; j++) {
-                if (dist[i][k] != numeric_limits<double>::infinity() && 
-                    dist[k][j] != numeric_limits<double>::infinity()) {
-                    dist[i][j] = min(dist[i][j], dist[i][k] + dist[k][j]);
-                }
-            }
-        }
-    }
-    
-    return dist;
-}
-
-// 方法二：动态规划解决设置信号放大器问题
-int WeightedDAG::minimumAmplifiersDP(int sourceNode, double d) {
-    // 1. 获取拓扑排序
-    vector<int> topoOrder = topologicalSort();
+    // 获取拓扑排序
+    std::vector<int> topoOrder = topologicalSort();
     if (topoOrder.empty()) return -1; // 图不是DAG
     
-    // 2. 计算所有节点对的最短距离
-    vector<vector<double>> shortestPaths = calculateAllPairsShortestPaths();
+    // dp[i]表示从源点到节点i所需的最少放大器数量
+    std::vector<int> dp(nodeCount_, INT_MAX);
+    dp[sourceNode] = 0;
     
-    // 3. 初始化dp数组
-    // dp[i][j]: 表示从源点到节点i，最后一个放大器放在节点j时，最少需要的放大器数量
-    vector<vector<int>> dp(n, vector<int>(n, INT_MAX));
+    // 记录当前累计距离
+    std::vector<double> distance(nodeCount_, std::numeric_limits<double>::infinity());
+    distance[sourceNode] = 0;
     
-    // 4. 初始条件：源点不放置放大器
-    dp[sourceNode][sourceNode] = 0;
+    // 存储放大器放置的决策
+    std::vector<bool> hasAmplifier(nodeCount_, false);
+    std::vector<int> parent(nodeCount_, -1);  // 记录最优路径的父节点
     
-    // 5. 按拓扑顺序处理每个节点
-    for (int i = 0; i < topoOrder.size(); i++) {
-        int currentNode = topoOrder[i];
+    // 按拓扑顺序处理节点
+    for (int node : topoOrder) {
+        if (dp[node] == INT_MAX) continue;
         
-        // 如果当前节点是源点，继续处理下一个节点
-        if (currentNode == sourceNode) continue;
-        
-        // 考虑所有可能的前驱节点和最后放大器位置
-        for (int j = 0; j < i; j++) {
-            int prevNode = topoOrder[j];
+        for (const auto& edge : adjacencyList_[node]) {
+            int nextNode = edge.first;
+            double weight = edge.second;
             
-            // 检查prevNode是否是currentNode的前驱
-            bool isDirectPredecessor = false;
-            for (const auto& edge : adj[prevNode]) {
-                if (edge.first == currentNode) {
-                    isDirectPredecessor = true;
-                    break;
+            // 不需要额外放大器的情况
+            if (distance[node] + weight <= maxDistance) {
+                if (dp[node] < dp[nextNode] || 
+                    (dp[node] == dp[nextNode] && distance[node] + weight < distance[nextNode])) {
+                    dp[nextNode] = dp[node];
+                    distance[nextNode] = distance[node] + weight;
+                    parent[nextNode] = node;
                 }
-            }
-            
-            if (!isDirectPredecessor) continue;
-            
-            // 对于每个可能的最后放大器位置
-            for (int lastAmp = 0; lastAmp < n; lastAmp++) {
-                // 如果到达prevNode的方案无效，跳过
-                if (dp[prevNode][lastAmp] == INT_MAX) continue;
-                
-                // 情况1：在currentNode放置放大器
-                if (dp[prevNode][lastAmp] != INT_MAX) {
-                    dp[currentNode][currentNode] = min(dp[currentNode][currentNode],
-                                                    dp[prevNode][lastAmp] + 1);
-                }
-                
-                // 情况2：不在currentNode放置放大器
-                // 需要检查从最后一个放大器到currentNode的距离是否超过d
-                if (shortestPaths[lastAmp][currentNode] <= d) {
-                    dp[currentNode][lastAmp] = min(dp[currentNode][lastAmp],
-                                                 dp[prevNode][lastAmp]);
+            } 
+            // 需要放置放大器的情况
+            else {
+                int newAmplifiers = dp[node] + 1;
+                if (newAmplifiers < dp[nextNode] || 
+                    (newAmplifiers == dp[nextNode] && weight < distance[nextNode])) {
+                    dp[nextNode] = newAmplifiers;
+                    distance[nextNode] = weight;
+                    parent[nextNode] = node;
+                    hasAmplifier[node] = true;
                 }
             }
         }
     }
     
-    // 6. 找出从源点到每个节点的最小放大器数量
-    int minAmplifiers = INT_MAX;
-    for (int j = 0; j < n; j++) {
-        for (int i = 0; i < n; i++) {
-            if (dp[i][j] != INT_MAX) {
-                minAmplifiers = min(minAmplifiers, dp[i][j]);
+    // 如果请求放大器位置，则构建放大器位置向量
+    if (amplifierLocations) {
+        amplifierLocations->assign(nodeCount_, false);
+        
+        // 找出叶子节点（拓扑排序的最后几个节点）
+        std::set<int> leafNodes;
+        for (int i = 0; i < nodeCount_; i++) {
+            if (adjacencyList_[i].empty() && dp[i] != INT_MAX) {
+                leafNodes.insert(i);
+            }
+        }
+        
+        // 从叶子节点回溯，标记放大器位置
+        for (int leaf : leafNodes) {
+            int current = leaf;
+            while (current != -1 && current != sourceNode) {
+                int prev = parent[current];
+                if (prev != -1 && distance[current] != distance[prev] + getEdgeWeight(prev, current)) {
+                    (*amplifierLocations)[prev] = true;
+                }
+                current = prev;
             }
         }
     }
     
-    return minAmplifiers == INT_MAX ? -1 : minAmplifiers;
+    // 计算最少放大器数量
+    int maxAmplifiers = 0;
+    for (int i = 0; i < nodeCount_; i++) {
+        if (dp[i] != INT_MAX) {
+            maxAmplifiers = std::max(maxAmplifiers, dp[i]);
+        }
+    }
+    
+    return maxAmplifiers;
 }
