@@ -74,15 +74,12 @@ int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance,
     std::vector<int> topoOrder = topologicalSort();
     if (topoOrder.empty()) return -1; // 图不是DAG
     
-    // 初始化距离数组
+    // 初始化距离数组和前驱节点数组
     std::vector<double> distance(nodeCount_, std::numeric_limits<double>::infinity());
+    std::vector<int> parent(nodeCount_, -1);
     distance[sourceNode] = 0;
     
-    // 放大器计数
-    int amplifierCount = 0;
-    std::vector<bool> hasAmplifier(nodeCount_, false);
-    
-    // 按拓扑顺序处理节点
+    // 使用拓扑顺序计算最短路径
     for (int node : topoOrder) {
         if (distance[node] == std::numeric_limits<double>::infinity()) 
             continue;
@@ -91,15 +88,52 @@ int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance,
             int nextNode = edge.first;
             double weight = edge.second;
             
-            // 如果需要放置放大器
-            if (distance[node] + weight > maxDistance && !hasAmplifier[node]) {
-                hasAmplifier[node] = true;
-                amplifierCount++;
-                distance[node] = 0; // 重置累计距离
+            if (distance[node] + weight < distance[nextNode]) {
+                distance[nextNode] = distance[node] + weight;
+                parent[nextNode] = node;
             }
+        }
+    }
+    
+    // 贪心放置放大器
+    int amplifierCount = 0;
+    std::vector<bool> hasAmplifier(nodeCount_, false);
+    
+    // 从每个叶子节点回溯到源点，放置放大器
+    for (int node = 0; node < nodeCount_; node++) {
+        if (distance[node] != std::numeric_limits<double>::infinity() && 
+            (adjacencyList_[node].empty() || node == nodeCount_ - 1)) { // 是叶子节点或最后一个节点
             
-            // 更新下一节点的距离
-            distance[nextNode] = std::min(distance[nextNode], distance[node] + weight);
+            // 从叶子节点回溯到源点
+            double currentDistance = 0;
+            int currentNode = node;
+            
+            while (currentNode != sourceNode) {
+                int prevNode = parent[currentNode];
+                if (prevNode == -1) break; // 防止断路
+                
+                double edgeWeight = 0;
+                for (const auto& edge : adjacencyList_[prevNode]) {
+                    if (edge.first == currentNode) {
+                        edgeWeight = edge.second;
+                        break;
+                    }
+                }
+                
+                // 检查添加这条边是否超过最大距离
+                if (currentDistance + edgeWeight > maxDistance) {
+                    // 需要在当前节点放置放大器
+                    if (!hasAmplifier[currentNode]) {
+                        hasAmplifier[currentNode] = true;
+                        amplifierCount++;
+                    }
+                    currentDistance = 0;
+                } else {
+                    currentDistance += edgeWeight;
+                }
+                
+                currentNode = prevNode;
+            }
         }
     }
     
