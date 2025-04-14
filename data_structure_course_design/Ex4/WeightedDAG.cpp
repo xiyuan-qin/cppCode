@@ -4,13 +4,15 @@
 #include <queue>
 #include <set>
 
+using namespace std;
+
 WeightedDAG::WeightedDAG(int nodeCount) : nodeCount_(nodeCount) {
     adjacencyList_.resize(nodeCount);
 }
 
 void WeightedDAG::addEdge(int from, int to, int weight) {
     if (from < 0 || from >= nodeCount_ || to < 0 || to >= nodeCount_) {
-        throw std::out_of_range("节点索引超出范围");
+        throw out_of_range("节点索引超出范围");
     }
     adjacencyList_[from].push_back({to, weight});
 }
@@ -28,8 +30,9 @@ int WeightedDAG::getEdgeWeight(int from, int to) const {
     return -1;
 }
 
-std::vector<int> WeightedDAG::topologicalSort() const {
-    std::vector<int> inDegree(nodeCount_, 0);
+// 拓扑排序
+vector<int> WeightedDAG::topologicalSort() const {
+    vector<int> inDegree(nodeCount_, 0);
     
     // 计算每个节点的入度
     for (int i = 0; i < nodeCount_; i++) {
@@ -39,12 +42,12 @@ std::vector<int> WeightedDAG::topologicalSort() const {
     }
     
     // 使用队列进行拓扑排序
-    std::queue<int> q;
+    queue<int> q;
     for (int i = 0; i < nodeCount_; i++) {
         if (inDegree[i] == 0) q.push(i);
     }
     
-    std::vector<int> result;
+    vector<int> result;
     while (!q.empty()) {
         int node = q.front(); q.pop();
         result.push_back(node);
@@ -56,32 +59,36 @@ std::vector<int> WeightedDAG::topologicalSort() const {
         }
     }
     
-    return result.size() == nodeCount_ ? result : std::vector<int>();
+    return result.size() == nodeCount_ ? result : vector<int>();
 }
 
+
+// 贪心算法
 int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance, 
-                                        std::vector<bool>* amplifierLocations) {
+                                        vector<bool>* amplifierLocations) {
     if (sourceNode < 0 || sourceNode >= nodeCount_) {
         return -1;
     }
     
-    // 初始化放大器位置向量（如果提供）
+    // 初始化放大器位置向量
     if (amplifierLocations) {
         amplifierLocations->assign(nodeCount_, false);
     }
     
     // 获取拓扑排序
-    std::vector<int> topoOrder = topologicalSort();
+    vector<int> topoOrder = topologicalSort();
+    {
     if (topoOrder.empty()) return -1; // 图不是DAG
+    }
     
     // 初始化距离数组和前驱节点数组
-    std::vector<double> distance(nodeCount_, std::numeric_limits<double>::infinity());
-    std::vector<int> parent(nodeCount_, -1);
+    vector<double> distance(nodeCount_, numeric_limits<double>::infinity());
+    vector<int> parent(nodeCount_, -1);
     distance[sourceNode] = 0;
     
     // 使用拓扑顺序计算最短路径
     for (int node : topoOrder) {
-        if (distance[node] == std::numeric_limits<double>::infinity()) 
+        if (distance[node] == numeric_limits<double>::infinity()) 
             continue;
             
         for (const auto& edge : adjacencyList_[node]) {
@@ -97,11 +104,11 @@ int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance,
     
     // 贪心放置放大器
     int amplifierCount = 0;
-    std::vector<bool> hasAmplifier(nodeCount_, false);
+    vector<bool> hasAmplifier(nodeCount_, false);
     
     // 从每个叶子节点回溯到源点，放置放大器
     for (int node = 0; node < nodeCount_; node++) {
-        if (distance[node] != std::numeric_limits<double>::infinity() && 
+        if (distance[node] != numeric_limits<double>::infinity() && 
             (adjacencyList_[node].empty() || node == nodeCount_ - 1)) { // 是叶子节点或最后一个节点
             
             // 从叶子节点回溯到源点
@@ -145,30 +152,42 @@ int WeightedDAG::minimumAmplifiersGreedy(int sourceNode, double maxDistance,
     return amplifierCount;
 }
 
+
+// 动态规划算法
 int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance, 
-                                    std::vector<bool>* amplifierLocations) {
+                                    vector<bool>* amplifierLocations) {
     if (sourceNode < 0 || sourceNode >= nodeCount_) {
         return -1;
     }
     
     // 获取拓扑排序
-    std::vector<int> topoOrder = topologicalSort();
+    vector<int> topoOrder = topologicalSort();
     if (topoOrder.empty()) return -1; // 图不是DAG
     
     // dp[i]表示从源点到节点i所需的最少放大器数量
-    std::vector<int> dp(nodeCount_, INT_MAX);
+    vector<int> dp(nodeCount_, INT_MAX);
     dp[sourceNode] = 0;
     
     // 记录当前累计距离
-    std::vector<double> distance(nodeCount_, std::numeric_limits<double>::infinity());
+    vector<double> distance(nodeCount_, numeric_limits<double>::infinity());
     distance[sourceNode] = 0;
     
     // 存储放大器放置的决策
-    std::vector<bool> hasAmplifier(nodeCount_, false);
-    std::vector<int> parent(nodeCount_, -1);  // 记录最优路径的父节点
+    vector<bool> hasAmplifier(nodeCount_, false);
+    vector<int> parent(nodeCount_, -1);  // 记录最优路径的父节点
     
     // 按拓扑顺序处理节点
     for (int node : topoOrder) {
+        /**
+         *  按照拓扑顺序处理每个节点
+         *  对于每个节点，考虑所有出边
+            对每条边(node, nextNode)，考虑两种情况：
+            a) 不需要放大器：如果distance[node] + weight <= maxDistance 
+            b) 需要放大器：在node处放置放大器，重置距离
+            每次从一个点到另一个点到时候，如果加上到边的权重超过了最大距离
+            就需要在当前节点放置放大器，同时重置到下一个节点的距离
+            不需要放大器的情况，直接更新到下一个节点的最小放大器数量，同时增加距离。
+         */
         if (dp[node] == INT_MAX) continue;
         
         for (const auto& edge : adjacencyList_[node]) {
@@ -180,6 +199,7 @@ int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance,
                 if (dp[node] < dp[nextNode] || 
                     (dp[node] == dp[nextNode] && distance[node] + weight < distance[nextNode])) {
                     dp[nextNode] = dp[node];
+                    // 更新距离为当前节点到下一个节点的距离
                     distance[nextNode] = distance[node] + weight;
                     parent[nextNode] = node;
                 }
@@ -189,8 +209,10 @@ int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance,
                 int newAmplifiers = dp[node] + 1;
                 if (newAmplifiers < dp[nextNode] || 
                     (newAmplifiers == dp[nextNode] && weight < distance[nextNode])) {
+                    // 更新放大器数量
                     dp[nextNode] = newAmplifiers;
-                    distance[nextNode] = weight;
+                    distance[nextNode] = weight;// 重置距离
+                    // 更新父节点
                     parent[nextNode] = node;
                     hasAmplifier[node] = true;
                 }
@@ -198,12 +220,17 @@ int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance,
         }
     }
     
-    // 如果请求放大器位置，则构建放大器位置向量
+    // 计算放大器位置
+    /**
+     * 找出所有的叶子节点
+     * 通过比较到达节点的累积距离和预期累积距离，判断是否在途中放置了放大器
+     * 如果发现差异，标记放大器的位置
+     */
     if (amplifierLocations) {
         amplifierLocations->assign(nodeCount_, false);
         
         // 找出叶子节点（拓扑排序的最后几个节点）
-        std::set<int> leafNodes;
+        set<int> leafNodes;
         for (int i = 0; i < nodeCount_; i++) {
             if (adjacencyList_[i].empty() && dp[i] != INT_MAX) {
                 leafNodes.insert(i);
@@ -227,7 +254,7 @@ int WeightedDAG::minimumAmplifiersDP(int sourceNode, double maxDistance,
     int maxAmplifiers = 0;
     for (int i = 0; i < nodeCount_; i++) {
         if (dp[i] != INT_MAX) {
-            maxAmplifiers = std::max(maxAmplifiers, dp[i]);
+            maxAmplifiers = max(maxAmplifiers, dp[i]);
         }
     }
     

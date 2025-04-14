@@ -3,25 +3,28 @@
 #include <fstream>
 #include <iomanip>
 #include <sstream>
+#include <filesystem>
+
+using namespace std;
 
 // GraphGenerator 类实现
 WeightedDAG GraphGenerator::generateRandomDAG(int nodeCount, double edgeProbability, 
                                             int minWeight, int maxWeight,
-                                            std::mt19937* gen) {
+                                            mt19937* gen) {
     // 创建随机数生成器
-    std::random_device rd;
-    std::mt19937 defaultGen(rd());
-    std::mt19937& generator = gen ? *gen : defaultGen;
+    random_device rd;
+    mt19937 defaultGen(rd());
+    mt19937& generator = gen ? *gen : defaultGen;
     
-    std::uniform_real_distribution<> edgeProb(0.0, 1.0);
-    std::uniform_int_distribution<> weightDist(minWeight, maxWeight);
+    uniform_real_distribution<> edgeProb(0.0, 1.0);
+    uniform_int_distribution<> weightDist(minWeight, maxWeight);
     
     // 创建图实例
     WeightedDAG graph(nodeCount);
     
     // 确保图是连通的，每个节点至少有一条入边（除了源点）
     for (int i = 1; i < nodeCount; i++) {
-        int from = std::uniform_int_distribution<>(0, i - 1)(generator);
+        int from = uniform_int_distribution<>(0, i - 1)(generator);
         int weight = weightDist(generator);
         graph.addEdge(from, i, weight);
     }
@@ -56,11 +59,18 @@ WeightedDAG GraphGenerator::generateExampleGraph() {
 
 // Visualizer 类实现
 void Visualizer::visualizeResult(const WeightedDAG& graph, 
-                                const std::vector<bool>& hasAmplifier, 
-                                const std::string& filename) {
-    std::ofstream dotFile(filename);
+                                const vector<bool>& hasAmplifier, 
+                                const string& filename) {
+    // 确保文件路径的目录存在
+    size_t slashPos = filename.find_last_of("/\\");
+    if (slashPos != string::npos) {
+        string dirPath = filename.substr(0, slashPos);
+        filesystem::create_directories(dirPath);
+    }
+    
+    ofstream dotFile(filename);
     if (!dotFile.is_open()) {
-        std::cerr << "无法创建DOT文件: " << filename << std::endl;
+        cerr << "无法创建DOT文件: " << filename << endl;
         return;
     }
     
@@ -89,43 +99,43 @@ void Visualizer::visualizeResult(const WeightedDAG& graph,
     dotFile << "}\n";
     dotFile.close();
     
-    std::cout << "可视化结果已保存至: " << filename << std::endl;
+    cout << "可视化结果已保存至: " << filename << endl;
 }
 
 void Visualizer::visualizeSolution(const WeightedDAG& graph, 
                                   int sourceNode, 
                                   double maxDistance,
-                                  const std::string& filename) {
+                                  const string& filename) {
     // 创建一个可修改的图副本
     WeightedDAG graphCopy = graph;
     
     // 获取贪心和动态规划算法的放大器位置
-    std::vector<bool> greedyLocations;
-    std::vector<bool> dpLocations;
+    vector<bool> greedyLocations;
+    vector<bool> dpLocations;
     
     int greedyAmplifiers = graphCopy.minimumAmplifiersGreedy(sourceNode, maxDistance, &greedyLocations);
     int dpAmplifiers = graphCopy.minimumAmplifiersDP(sourceNode, maxDistance, &dpLocations);
     
     // 使用放大器数量更少的结果
-    std::vector<bool>& finalLocations = (greedyAmplifiers <= dpAmplifiers) ? greedyLocations : dpLocations;
-    int finalCount = std::min(greedyAmplifiers, dpAmplifiers);
+    vector<bool>& finalLocations = (greedyAmplifiers <= dpAmplifiers) ? greedyLocations : dpLocations;
+    int finalCount = min(greedyAmplifiers, dpAmplifiers);
     
     // 可视化结果
     visualizeResult(graphCopy, finalLocations, filename);
     
-    std::cout << "图中放置了 " << finalCount << " 个放大器，可视化结果已保存至: " << filename << std::endl;
-    std::cout << "贪心算法: " << greedyAmplifiers << " 个放大器，动态规划: " << dpAmplifiers << " 个放大器" << std::endl;
+    cout << "图中放置了 " << finalCount << " 个放大器，可视化结果已保存至: " << filename << endl;
+    cout << "贪心算法: " << greedyAmplifiers << " 个放大器，动态规划: " << dpAmplifiers << " 个放大器" << endl;
 }
 
 // PerformanceTester 类实现
-std::vector<PerformanceResult> PerformanceTester::compareAlgorithms(
+vector<PerformanceResult> PerformanceTester::compareAlgorithms(
     int minNodes, int maxNodes, int step, double maxDistance, int testsPerSize) {
     
-    std::vector<PerformanceResult> results;
+    vector<PerformanceResult> results;
     
-    std::cout << "\n===== 算法性能测试 =====\n";
-    std::cout << "节点数范围: " << minNodes << "-" << maxNodes << ", 步长: " << step << "\n";
-    std::cout << "每种规模测试次数: " << testsPerSize << ", 信号衰减阈值 d: " << maxDistance << "\n\n";
+    cout << "\n===== 算法性能测试 =====\n";
+    cout << "节点数范围: " << minNodes << "-" << maxNodes << ", 步长: " << step << "\n";
+    cout << "每种规模测试次数: " << testsPerSize << ", 信号衰减阈值 d: " << maxDistance << "\n\n";
     
     for (int nodeCount = minNodes; nodeCount <= maxNodes; nodeCount += step) {
         PerformanceResult result;
@@ -140,16 +150,16 @@ std::vector<PerformanceResult> PerformanceTester::compareAlgorithms(
             WeightedDAG graph = GraphGenerator::generateRandomDAG(nodeCount, 0.3, 1, 10);
             
             // 测试贪心算法
-            auto startGreedy = std::chrono::high_resolution_clock::now();
+            auto startGreedy = chrono::high_resolution_clock::now();
             int greedyResult = graph.minimumAmplifiersGreedy(0, maxDistance);
-            auto endGreedy = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double, std::milli> greedyDuration = endGreedy - startGreedy;
+            auto endGreedy = chrono::high_resolution_clock::now();
+            chrono::duration<double, milli> greedyDuration = endGreedy - startGreedy;
             
             // 测试动态规划算法
-            auto startDP = std::chrono::high_resolution_clock::now();
+            auto startDP = chrono::high_resolution_clock::now();
             int dpResult = graph.minimumAmplifiersDP(0, maxDistance);
-            auto endDP = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double, std::milli> dpDuration = endDP - startDP;
+            auto endDP = chrono::high_resolution_clock::now();
+            chrono::duration<double, milli> dpDuration = endDP - startDP;
             
             // 累加时间和结果
             result.greedyTime += greedyDuration.count();
@@ -159,10 +169,10 @@ std::vector<PerformanceResult> PerformanceTester::compareAlgorithms(
             
             // 验证两种算法结果是否一致
             if (greedyResult != dpResult) {
-                std::cout << "警告: 节点数=" << nodeCount 
+                cout << "警告: 节点数=" << nodeCount 
                           << " 的测试 #" << test
                           << " - 贪心: " << greedyResult 
-                          << ", 动态规划: " << dpResult << std::endl;
+                          << ", 动态规划: " << dpResult << endl;
             }
         }
         
@@ -174,74 +184,81 @@ std::vector<PerformanceResult> PerformanceTester::compareAlgorithms(
         
         results.push_back(result);
         
-        std::cout << "节点数: " << nodeCount 
+        cout << "节点数: " << nodeCount 
                   << ", 贪心平均: " << result.greedyTime << "ms"
                   << ", 动态规划平均: " << result.dpTime << "ms" 
-                  << ", 平均放大器数: " << result.greedyAmplifiers << std::endl;
+                  << ", 平均放大器数: " << result.greedyAmplifiers << endl;
     }
     
     return results;
 }
 
-void PerformanceTester::outputResults(const std::vector<PerformanceResult>& results) {
+void PerformanceTester::outputResults(const vector<PerformanceResult>& results) {
+    // 创建data目录（如果不存在）
+    string dataDir = "data";
+    filesystem::create_directory(dataDir);
+    
     // 输出到CSV文件
-    std::ofstream csvFile("performance_results.csv");
-    csvFile << "NodeCount,GreedyTime(ms),DPTime(ms),GreedyAmplifiers,DPAmplifiers" << std::endl;
+    ofstream csvFile("data/performance_results.csv");
+    csvFile << "NodeCount,GreedyTime(ms),DPTime(ms),GreedyAmplifiers,DPAmplifiers" << endl;
     
     for (const auto& result : results) {
         csvFile << result.nodeCount << "," 
                 << result.greedyTime << "," 
                 << result.dpTime << ","
                 << result.greedyAmplifiers << ","
-                << result.dpAmplifiers << std::endl;
+                << result.dpAmplifiers << endl;
     }
     
     csvFile.close();
     
     // 输出到控制台表格
-    std::cout << "\n===== 性能测试结果 =====\n";
-    std::cout << std::setw(10) << "节点数" 
-              << std::setw(15) << "贪心 (ms)" 
-              << std::setw(15) << "动态规划 (ms)" 
-              << std::setw(15) << "速度比(DP/贪心)" << std::endl;
+    cout << "\n===== 性能测试结果 =====\n";
+    cout << setw(10) << "节点数" 
+              << setw(15) << "贪心 (ms)" 
+              << setw(15) << "动态规划 (ms)" 
+              << setw(15) << "速度比(DP/贪心)" << endl;
     
     for (const auto& result : results) {
         double ratio = result.dpTime / result.greedyTime;
-        std::cout << std::setw(10) << result.nodeCount 
-                  << std::setw(15) << std::fixed << std::setprecision(2) << result.greedyTime 
-                  << std::setw(15) << std::fixed << std::setprecision(2) << result.dpTime 
-                  << std::setw(15) << std::fixed << std::setprecision(2) << ratio << std::endl;
+        cout << setw(10) << result.nodeCount 
+                  << setw(15) << fixed << setprecision(2) << result.greedyTime 
+                  << setw(15) << fixed << setprecision(2) << result.dpTime 
+                  << setw(15) << fixed << setprecision(2) << ratio << endl;
     }
 }
 
 // AmplifierPlacement 类实现
-std::vector<bool> AmplifierPlacement::getAmplifierPlacementGreedy(
+vector<bool> AmplifierPlacement::getAmplifierPlacementGreedy(
     WeightedDAG& graph, int sourceNode, double maxDistance) {
     
-    std::vector<bool> amplifierLocations;
+    vector<bool> amplifierLocations;
     graph.minimumAmplifiersGreedy(sourceNode, maxDistance, &amplifierLocations);
     return amplifierLocations;
 }
 
-std::vector<bool> AmplifierPlacement::getAmplifierPlacementDP(
+vector<bool> AmplifierPlacement::getAmplifierPlacementDP(
     WeightedDAG& graph, int sourceNode, double maxDistance) {
     
-    std::vector<bool> amplifierLocations;
+    vector<bool> amplifierLocations;
     graph.minimumAmplifiersDP(sourceNode, maxDistance, &amplifierLocations);
     return amplifierLocations;
 }
 
 void AmplifierPlacement::visualizeSolutionForGraph(int nodeCount, int testNumber, double maxDistance) {
     // 创建一个固定种子的随机生成器
-    std::mt19937 gen(testNumber);
+    mt19937 gen(testNumber);
     
     // 创建图
     WeightedDAG graph = GraphGenerator::generateRandomDAG(
         nodeCount, 0.3, 1, 10, &gen);
     
+    // 确保data目录存在
+    filesystem::create_directory("data");
+    
     // 生成文件名
-    std::string filename = "graph_" + std::to_string(nodeCount) + 
-                         "_test_" + std::to_string(testNumber) + ".dot";
+    string filename = "data/graph_" + to_string(nodeCount) + 
+                     "_test_" + to_string(testNumber) + ".dot";
     
     // 可视化解决方案
     Visualizer::visualizeSolution(graph, 0, maxDistance, filename);
